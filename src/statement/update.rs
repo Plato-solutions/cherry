@@ -1,11 +1,12 @@
 use std::any::TypeId;
+use std::borrow::BorrowMut;
 
 use sql_builder::SqlBuilder;
 use sqlx::encode::Encode;
 use sqlx::types::Type;
 
-use crate::{Cherry, connection, gen_execute, gen_where};
-use crate::query::query_builder::QueryBuilder;
+use crate::{Cherry, connection, query, clause};
+use crate::query::builder::QueryBuilder;
 use crate::types::{Database, QueryResult, Result, Transaction};
 
 pub struct Update<'a> {
@@ -38,12 +39,27 @@ impl<'a> Update<'a> {
         self
     }
 
-    gen_where!();
-
     fn build_sql(&mut self) -> Result<String> {
         Ok(self.query.sql_builder.sql()?)
     }
+}
 
-    gen_execute!();
+impl <'a>crate::statement::Statement<'a> for Update<'a> {
+    fn query(&'a mut self) -> &'a mut QueryBuilder<'a> {
+        &mut self.query
+    }
+}
 
+impl <'a>crate::statement::Execute<'a> for Update<'a> {}
+
+impl <'a> crate::clause::Where<'a> for Update<'a> {
+    type Statement = Update<'a>;
+}
+
+impl <'a> crate::clause::Like<'a> for Update<'a> {
+    type Statement = Update<'a>;
+}
+
+impl <'a> crate::clause::Order<'a> for Update<'a> {
+    type Statement = Update<'a>;
 }

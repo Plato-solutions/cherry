@@ -91,6 +91,26 @@ impl<'a> QueryBuilder<'a>{
         self
     }
 
+    pub(crate) fn and_where_like<S, V>(&mut self, f: S, v: V) -> &mut Self
+        where
+            S: ToString,
+            V: Encode<'a, Database> + Type<Database> + Send + 'a
+    {
+        self.sql_builder.and_where_like(f, '?');
+        self.arguments.add(v);
+        self
+    }
+
+    pub(crate) fn and_where_not_like<S, V>(&mut self, f: S, v: V) -> &mut Self
+        where
+            S: ToString,
+            V: Encode<'a, Database> + Type<Database> + Send + 'a
+    {
+        self.sql_builder.and_where_not_like(f, '?');
+        self.arguments.add(v);
+        self
+    }
+
     pub(crate) fn and_where_is_null<S>(&mut self, f: S) -> &mut Self where S: ToString {
         self.sql_builder.and_where_is_null(f);
         self
@@ -110,6 +130,19 @@ impl<'a> QueryBuilder<'a>{
         self.arguments.add(min);
         self.arguments.add(max);
         self
+    }
+
+    pub(crate) fn and_where_between_options<S, V>(&mut self, f: S, min: Option<V>, max: Option<V>) -> &mut Self
+        where
+            S: ToString,
+            V: Encode<'a, Database> + Type<Database> + Send + 'a
+    {
+        match (min, max) {
+            (Some(a), Some(b)) => self.and_where_between(f, a, b),
+            (Some(a), None) => self.and_where_gt(f, a),
+            (None, Some(b)) => self.and_where_lt(f, b),
+            _ => self,
+        }
     }
 
     pub(crate) fn and_where_not_between<S, V>(&mut self, f: S, min: V, max: V) -> &mut Self
@@ -144,6 +177,15 @@ impl<'a> QueryBuilder<'a>{
         v.iter().for_each(|v| {
             self.arguments.add(v);
         });
+        self
+    }
+
+    pub(crate) fn order_by<V>(&mut self, v: V,desc: bool) -> &mut Self
+        where
+            V: Encode<'a, Database> + Type<Database> + Send + 'a
+    {
+        self.sql_builder.order_by('?', desc);
+        self.arguments.add(v);
         self
     }
 
@@ -208,6 +250,8 @@ impl<'a> QueryBuilder<'a>{
         self.arguments.add(v);
         self
     }
+
+
 
     pub(crate) fn or_where_is_null<S>(&mut self, f: S) -> &mut Self where S: ToString {
         self.sql_builder.or_where_is_null(f);

@@ -5,8 +5,9 @@ use sql_builder::SqlBuilder;
 use sqlx::encode::Encode;
 use sqlx::types::Type;
 
-use crate::{Cherry, connection, gen_where};
-use crate::query::query_builder::QueryBuilder;
+use crate::{Cherry, connection, clause};
+use crate::query::builder::QueryBuilder;
+use crate::statement::Execute;
 use crate::types::{Database, Result};
 
 pub struct Select<'a, T> {
@@ -21,6 +22,10 @@ impl<'a, T> Select<'a, T> where T: Cherry {
             _keep: PhantomData,
             query: QueryBuilder::new::<T>(datasource, SqlBuilder::select_from(T::table()))
         }
+    }
+
+    fn build_sql(&mut self) -> Result<String> {
+        Ok(self.query.sql_builder.sql()?)
     }
 
     pub fn field<S: ToString>(mut self, f: S) -> Self {
@@ -58,11 +63,9 @@ impl<'a, T> Select<'a, T> where T: Cherry {
         self
     }
 
-    gen_where!();
-
-    pub async fn fetch(self) -> Result<Option<T>> {
+    pub async fn fetch(mut self) -> Result<Option<T>> {
         let row = sqlx::query_with(
-            self.query.sql_builder.sql()?.as_str(),
+            self.build_sql()?.as_str(),
             self.query.arguments
         ).fetch_optional(connection::get(self.query.datasource)?).await?;
         match row {
@@ -71,9 +74,9 @@ impl<'a, T> Select<'a, T> where T: Cherry {
         }
     }
 
-    pub async fn fetch_all(self) -> Result<Vec<T>> {
+    pub async fn fetch_all(mut self) -> Result<Vec<T>> {
         let rows = sqlx::query_with(
-            self.query.sql_builder.sql()?.as_str(),
+            self.build_sql()?.as_str(),
             self.query.arguments
         ).fetch_all(connection::get(self.query.datasource)?).await?;
         let mut vec = Vec::with_capacity(rows.len());
@@ -83,4 +86,23 @@ impl<'a, T> Select<'a, T> where T: Cherry {
         Ok(vec)
     }
 
+}
+
+
+impl <'a,T>crate::statement::Statement<'a> for Select<'a, T> {
+    fn query(&'a mut self) -> &'a mut QueryBuilder<'a> {
+        &mut self.query
+    }
+}
+
+impl <'a,T> crate::clause::Where<'a> for Select<'a, T> {
+    type Statement = Select<'a, T>;
+}
+
+impl <'a,T> crate::clause::Like<'a> for Select<'a, T> {
+    type Statement = Select<'a, T>;
+}
+
+impl <'a,T> crate::clause::Order<'a> for Select<'a, T> {
+    type Statement = Select<'a, T>;
 }

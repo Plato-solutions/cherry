@@ -1,9 +1,10 @@
+#![feature(in_band_lifetimes)]
 // #![allow(unused_imports, deprecated, unused_must_use, unused_mut, unused_variables, dead_code, unreachable_code)]
 
 pub(crate) mod cherry;
 pub(crate) mod datasource;
-pub(crate) mod query;
 
+// pub use cherry_derive::*;
 pub use {
     cherry::Cherry,
     datasource::DataSource,
@@ -16,9 +17,12 @@ pub mod error {
     pub use anyhow::Error;
 }
 
+pub(crate) mod query;
+pub(crate) mod statement;
+pub(crate) mod clause;
+
 pub mod sqlx {
     pub use sqlx::{Database, Decode, Encode, Arguments, Row, types::Type};
-
     #[cfg(feature = "json")]
     pub use sqlx::types::Json;
     #[cfg(feature = "uuid")]

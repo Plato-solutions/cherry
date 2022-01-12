@@ -3,11 +3,11 @@ use std::any::Any;
 use async_trait::async_trait;
 
 use crate::{Cherry, connection};
-use crate::query::delete::Delete;
-use crate::query::insert::Insert;
-use crate::query::insert_update::InsertUpdate;
-use crate::query::select::Select;
-use crate::query::update::Update;
+use crate::statement::delete::Delete;
+use crate::statement::insert::Insert;
+use crate::statement::insert_update::InsertUpdate;
+use crate::statement::select::Select;
+use crate::statement::update::Update;
 use crate::types::{Result, Transaction};
 
 #[async_trait]

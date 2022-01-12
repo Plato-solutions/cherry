@@ -1,11 +1,12 @@
 use std::any::TypeId;
+use std::borrow::BorrowMut;
 
 use anyhow::anyhow;
 use sql_builder::SqlBuilder;
 use sqlx::{Encode, Type};
 
-use crate::{Cherry, connection, gen_execute, gen_where};
-use crate::query::query_builder::QueryBuilder;
+use crate::{Cherry, connection, query, clause};
+use crate::query::builder::QueryBuilder;
 use crate::types::{Database, QueryResult, Result, Transaction};
 
 pub struct InsertUpdate<'a> {
@@ -55,8 +56,6 @@ impl<'a> InsertUpdate<'a> {
         self
     }
 
-    gen_where!();
-
     fn build_sql(&mut self) -> Result<String> {
         if self.fields.is_empty() {
             return Err(anyhow!("Empty update fields."));
@@ -78,7 +77,24 @@ impl<'a> InsertUpdate<'a> {
             .to_owned();
         Ok(format!("{} AS new ON DUPLICATE KEY UPDATE {};", insert, update))
     }
+}
 
-    gen_execute!();
+impl <'a> crate::statement::Statement<'a> for InsertUpdate<'a> {
+    fn query(&'a mut self) -> &'a mut QueryBuilder<'a> {
+        &mut self.query
+    }
+}
 
+impl <'a> crate::statement::Execute<'a> for InsertUpdate<'a> {}
+
+impl <'a> crate::clause::Where<'a> for InsertUpdate<'a> {
+    type Statement = InsertUpdate<'a>;
+}
+
+impl <'a> crate::clause::Like<'a> for InsertUpdate<'a> {
+    type Statement = InsertUpdate<'a>;
+}
+
+impl <'a> crate::clause::Order<'a> for InsertUpdate<'a> {
+    type Statement = InsertUpdate<'a>;
 }

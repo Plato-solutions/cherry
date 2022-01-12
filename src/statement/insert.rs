@@ -1,9 +1,10 @@
 use std::any::TypeId;
+use std::borrow::BorrowMut;
 
 use sql_builder::SqlBuilder;
 
-use crate::{Cherry, connection, gen_execute};
-use crate::query::query_builder::QueryBuilder;
+use crate::{Cherry, connection, query};
+use crate::query::builder::QueryBuilder;
 use crate::types::{QueryResult, Result, Transaction};
 
 pub struct Insert<'a> {
@@ -66,7 +67,12 @@ impl<'a> Insert<'a> {
         }
         Ok(sql)
     }
-
-    gen_execute!();
-
 }
+
+impl <'a>crate::statement::Statement<'a> for Insert<'a> {
+    fn query(&'a mut self) -> &'a mut QueryBuilder<'a> {
+        &mut self.query
+    }
+}
+
+impl <'a>crate::statement::Execute<'a> for Insert<'a> {}

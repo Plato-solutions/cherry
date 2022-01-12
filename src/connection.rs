@@ -22,6 +22,7 @@ pub async fn setup_pools<T>(config: T) -> Result<()>
 }
 
 pub(crate) fn get(type_id: TypeId) -> Result<&'static Pool> {
+
     let value = POOLS.get()
         .ok_or_else(|| anyhow!("Pools is empty."))?
         .get(&type_id)

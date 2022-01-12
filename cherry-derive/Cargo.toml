@@ -1,7 +1,7 @@
 [package]
 name = "cherry-derive"
-version = "0.2.2"
-authors = ["bugslabx <bugslabx@gmail.com>"]
+version = "0.2.3"
+authors = ["bugslabx <bugslabx@gmail.com>","Ryan Miller<ryan@platosolutions.io>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/bugslabx/cherry"
@@ -9,11 +9,31 @@ keywords = ["ORM", "MySQL", "PostgreSQL", "SQLite", "SQLServer"]
 description = "An asynchronous ORM, support MySQL, PostgreSQL, SQLite and SQL Server."
 
 [lib]
-name = "cherry_derive"
 proc-macro = true
 
-[dependencies]
-proc-macro2 = "1.0.26"
-syn = "1.0.68"
-quote = "1.0.10"
-heck = "0.3.2"
+[dependencies.itertools]
+version = "0.10"
+
+[dependencies.once_cell]
+version = "1"
+
+[dependencies.proc-macro-error]
+version = "1"
+
+[dependencies.proc-macro2]
+version = "1.0.26"
+
+[dependencies.quote]
+version = "1.0.10"
+
+[dependencies.syn]
+version = "1.0.68"
+features = ["full"]
+
+[dependencies.heck]
+version = "0.3.2"
+
+[features]
+mysql = []
+postgres = []
+sqlite = []

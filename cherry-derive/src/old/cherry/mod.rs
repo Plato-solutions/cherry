@@ -1,70 +1,100 @@
+
+
 use proc_macro::TokenStream;
+use std::fmt::format;
 use std::str::FromStr;
 
 use heck::SnakeCase;
 use proc_macro2::Span;
 use quote::quote;
 use syn::{Data, Ident, Lit, Meta, NestedMeta, punctuated::Punctuated};
+use syn::{DeriveInput, Result, Type, Visibility};
 
-pub fn derive(ast: syn::DeriveInput) -> TokenStream {
+mod parse;
+
+pub fn derive(ast: syn::DeriveInput) -> Result<TokenStream> {
+    let parsed = Table::try_from(&input)?;
+
+    let impl_table = Implementation::impl_table(&parsed);
+    let insert_struct = Implementation::insert_struct(&parsed);
+    let impl_insert = Implementation::impl_insert(&parsed);
+    let getters = Implementation::impl_getters(&parsed);
+    let setters = Implementation::impl_setters(&parsed);
+
+    Ok(quote! {
+        #impl_table
+        #insert_struct
+        #impl_insert
+        #getters
+        #setters
+    })
+}
+
+pub fn derive2(ast: syn::DeriveInput) -> TokenStream {
     let fields = match &ast.data {
         Data::Struct(ref s) => &s.fields,
         _ => panic!("Cherry only impl for struct."),
     };
     let ident = &ast.ident;
     let table = parse_attrs(&ast);
-
-    let fields_vec = fields.iter().filter_map(|field|
-        field.ident.as_ref().map(|ident| ident.to_string())
-    ).collect::<Vec<String>>();
-
-    let fields = fields_vec.iter().map(|s|
-        format!(r#" "{}", "#, s)
-    ).collect::<String>();
-
-    let arguments = fields_vec.iter().map(|s|
-        format!(r#" arguments.add(&self.{}); "#, s)
-    ).collect::<String>();
-
-    let from_row = fields_vec.iter().map(|s|
-        format!(r#" {0}: row.try_get("{0}")?, "#, s)
-    ).collect::<String>();
-
-    let token = quote!(
-        impl cherry::Cherry for #ident {
-            fn table() -> &'static str {
-                #table
-            }
-            fn columns() -> Vec<&'static str> {
-                vec![ [fields] ]
-            }
-
-            fn arguments<'a>(&'a self, arguments: &mut cherry::types::Arguments<'a>) {
-                use cherry::sqlx::Arguments as OtherArguments;
-                [arguments]
-            }
-
-            fn from_row(row: &cherry::types::Row) -> Result<Self, cherry::error::Error> {
-                use cherry::sqlx::Row as OtherRow;
-                Ok( Self { [from_row] } )
-            }
-        }
-    );
-
-    let token = token.to_string()
-        .replace("[fields]", fields.as_str())
-        .replace("[arguments]", arguments.as_str())
-        .replace("[from_row]", from_row.as_str());
-
+    //
+    // let fields_vec = fields.iter().filter_map(|field|
+    //     field.ident.as_ref().map(|ident| ident.to_string())
+    // ).collect::<Vec<String>>();
+    //
+    // let fields = fields_vec.iter().map(|s|
+    //     format!(r#" "{}", "#, s)
+    // ).collect::<String>();
+    //
+    // let arguments = fields_vec.iter().map(|s|
+    //     format!(r#" arguments.add(&self.{}); "#, s)
+    // ).collect::<String>();
+    //
+    // let from_row = fields_vec.iter().map(|s|
+    //     format!(r#" {0}: row.try_get("{0}")?, "#, s)
+    // ).collect::<String>();
+    //
+    // let token = quote!(
+    //     impl cherry::Cherry for #ident {
+    //         fn table() -> &'static str {
+    //             #table
+    //         }
+    //         fn columns() -> Vec<&'static str> {
+    //             vec![ [fields] ]
+    //         }
+    //
+    //         fn arguments<'a>(&'a self, arguments: &mut cherry::types::Arguments<'a>) {
+    //             use cherry::sqlx::Arguments as OtherArguments;
+    //             [arguments]
+    //         }
+    //
+    //         fn from_row(row: &cherry::types::Row) -> Result<Self, cherry::error::Error> {
+    //             use cherry::sqlx::Row as OtherRow;
+    //             Ok( Self { [from_row] } )
+    //         }
+    //     }
+    // );
+    //
+    // let token = token.to_string()
+    //     .replace("[fields]", fields.as_str())
+    //     .replace("[arguments]", arguments.as_str())
+    //     .replace("[from_row]", from_row.as_str());
+    //
+    let token = "".to_string();
     TokenStream::from_str(token.as_str()).expect("Parse token stream failed")
 }
 
 // If attribute exists, should set `table` value, and only `table` allowed.
 fn parse_attrs(ast: &syn::DeriveInput) -> String {
     let value = ast.attrs.iter().find_map(|attr| {
-        match attr.parse_meta().unwrap() {
-            Meta::List(meta_list) => Some(meta_list),
-            _ => None
+        match attr.parse_meta() {
+            Ok(meta) => {
+                match meta {
+                    Meta::List(meta_list) => Some(meta_list),
+                    _ => None
+                }
+            },
+            Err(e) => { panic!("Failed parsing attribute {:?}",ast)},
         }
     }).filter(|meta_list| {
         meta_list.path.get_ident() == Some(&Ident::new("cherry", Span::call_site()))
