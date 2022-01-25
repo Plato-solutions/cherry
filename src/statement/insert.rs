@@ -5,7 +5,7 @@ use sql_builder::SqlBuilder;
 
 use crate::{Cherry, connection, query};
 use crate::query::builder::QueryBuilder;
-use crate::types::{QueryResult, Result, Transaction};
+use crate::types::{Arguments, QueryResult, Result, Transaction};
 
 pub struct Insert<'a> {
     pub(crate) query: QueryBuilder<'a>,
@@ -70,8 +70,22 @@ impl<'a> Insert<'a> {
 }
 
 impl <'a>crate::statement::Statement<'a> for Insert<'a> {
-    fn query(&'a mut self) -> &'a mut QueryBuilder<'a> {
-        &mut self.query
+
+    fn query(&'a mut self) -> (&'a mut Insert<'a>, &'a mut QueryBuilder<'a>){
+        (self,self.query.borrow_mut())
+    }
+
+    fn datasource(&'a self) -> TypeId {
+        self.query.datasource
+    }
+
+    fn arguments(mut self) -> Arguments<'a> {
+        self.query.arguments
+    }
+
+    fn build_sql<'s:'a>(&'s  mut self) -> crate::types::Result<String> {
+        let (self2,query) = self.query();
+        Ok(query.sql_builder.sql()?)
     }
 }
 

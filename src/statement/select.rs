@@ -8,7 +8,7 @@ use sqlx::types::Type;
 use crate::{Cherry, connection, clause};
 use crate::query::builder::QueryBuilder;
 use crate::statement::Execute;
-use crate::types::{Database, Result};
+use crate::types::{Arguments, Database, Result};
 
 pub struct Select<'a, T> {
     _keep: PhantomData<T>,
@@ -90,8 +90,21 @@ impl<'a, T> Select<'a, T> where T: Cherry {
 
 
 impl <'a,T>crate::statement::Statement<'a> for Select<'a, T> {
-    fn query(&'a mut self) -> &'a mut QueryBuilder<'a> {
-        &mut self.query
+    fn query(&'a mut self) -> (&'a mut Select<'a,T>, &'a mut QueryBuilder<'a>){
+        (self,&mut self.query)
+    }
+
+    fn datasource(&'a self) -> TypeId {
+        self.query.datasource
+    }
+
+    fn arguments(self) -> Arguments<'a> {
+        self.query.arguments
+    }
+
+    fn build_sql<'s:'a>(&'s  mut self) -> crate::types::Result<String> {
+        let (self2,query) = self.query();
+        Ok(query.sql_builder.sql()?)
     }
 }
 

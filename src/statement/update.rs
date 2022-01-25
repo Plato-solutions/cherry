@@ -7,7 +7,7 @@ use sqlx::types::Type;
 
 use crate::{Cherry, connection, query, clause};
 use crate::query::builder::QueryBuilder;
-use crate::types::{Database, QueryResult, Result, Transaction};
+use crate::types::{Arguments, Database, QueryResult, Result, Transaction};
 
 pub struct Update<'a> {
     pub(crate) query: QueryBuilder<'a>,
@@ -45,8 +45,21 @@ impl<'a> Update<'a> {
 }
 
 impl <'a>crate::statement::Statement<'a> for Update<'a> {
-    fn query(&'a mut self) -> &'a mut QueryBuilder<'a> {
-        &mut self.query
+    fn query(&'a mut self) -> (&'a mut Update<'a>, &'a mut QueryBuilder<'a>){
+        (self,&mut self.query)
+    }
+
+    fn datasource(&'a self) -> TypeId {
+        self.query.datasource
+    }
+
+    fn arguments(self) -> Arguments<'a> {
+        self.query.arguments
+    }
+
+    fn build_sql<'s:'a>(&'s  mut self) -> crate::types::Result<String> {
+        let (self2,query) = self.query();
+        Ok(query.sql_builder.sql()?)
     }
 }
 

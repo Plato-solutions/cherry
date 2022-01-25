@@ -6,21 +6,23 @@ use crate::types::Database;
 pub(crate) trait Like<'a>: Statement<'a>
 {
     type Statement;
-    fn and_where_like<S, V>(&mut self, f: S, v: V) -> &mut Self
+    fn and_where_like<S, V>(&'a mut self, f: S, v: V) -> &'a mut Self
         where
             S: ToString,
             V: Encode<'a, Database> + Type<Database> + Send + 'a
     {
-        self.query().and_where_like(f, v);
-        self
+        let (self2,query) = self.query();
+        query.and_where_like(f, v);
+        self2
     }
 
-    fn and_where_not_like<S, V>(&mut self, f: S, v: V) -> &mut Self
+    fn and_where_not_like<S, V>(&'a mut self, f: S, v: V) -> &'a mut Self
         where
             S: ToString,
             V: Encode<'a, Database> + Type<Database> + Send + 'a
     {
-        self.query().and_where_not_like(f, v);
-        self
+        let (self2,query) = self.query();
+        query.and_where_not_like(f, v);
+        self2
     }
 }
