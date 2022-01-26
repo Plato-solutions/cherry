@@ -81,6 +81,24 @@ macro_rules! gen_where {
             self
         }
 
+        pub fn and_where_like<S, V>(mut self, f: S, v: V) -> Self
+            where
+                S: ToString,
+                V: Encode<'a, Database> + Type<Database> + Send + 'a
+        {
+            self.query.and_where_like(f, v);
+            self
+        }
+
+        pub fn and_where_not_like<S, V>(mut self, f: S, v: V) -> Self
+            where
+                S: ToString,
+                V: Encode<'a, Database> + Type<Database> + Send + 'a
+        {
+            self.query.and_where_not_like(f, v);
+            self
+        }
+
         pub fn and_where_is_null<S>(mut self, f: S) -> Self where S: ToString {
             self.query.and_where_is_null(f);
             self
@@ -97,6 +115,15 @@ macro_rules! gen_where {
                 V: Encode<'a, Database> + Type<Database> + Send + 'a
         {
             self.query.and_where_between(f, min, max);
+            self
+        }
+
+        pub fn and_where_between_options<S, V>(mut self, f: S, min: Option<V>, max: Option<V>) -> Self
+        where
+            S: ToString,
+            V: Encode<'a, Database> + Type<Database> + Send + 'a,
+        {
+            self.query.and_where_between_options(f, min, max);
             self
         }
 

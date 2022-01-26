@@ -4,6 +4,8 @@ pub(crate) mod cherry;
 pub(crate) mod datasource;
 pub(crate) mod query;
 
+pub use cherry_macros::*;
+
 pub use {
     cherry::Cherry,
     datasource::DataSource,

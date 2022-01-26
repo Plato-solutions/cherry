@@ -58,6 +58,14 @@ impl<'a, T> Select<'a, T> where T: Cherry {
         self
     }
 
+    pub fn order_by<V>(mut self, v: V, desc: bool) -> Self
+        where
+            V: Encode<'a, Database> + Type<Database> + Send + 'a + ToString
+    {
+        self.query.sql_builder.order_by(v, desc);
+        self
+    }
+
     gen_where!();
 
     pub async fn fetch(self) -> Result<Option<T>> {

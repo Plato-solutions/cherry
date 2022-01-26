@@ -1,6 +1,6 @@
 [package]
 name = "cherry"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["bugslabx <bugslabx@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -13,10 +13,10 @@ name = "cherry"
 
 [features]
 default = ["sqlx/default"]
-mysql = ["sqlx/mysql"]
-postgres = ["sqlx/postgres"]
-sqlite = ["sqlx/sqlite"]
-mssql = ["sqlx/mssql"]
+mysql = ["sqlx/mysql","cherry-macros/mysql"]
+postgres = ["sqlx/postgres","cherry-macros/mysql"]
+sqlite = ["sqlx/sqlite","cherry-macros/mysql"]
+#mssql = ["sqlx/mssql"]
 
 uuid = ["sqlx/uuid"]
 json = ["sqlx/json", "serde", "serde_derive"]
@@ -59,11 +59,17 @@ sqlx = "0.5.9"
 serde = { version = "1.0.123", optional = true }
 serde_derive = { version = "1.0.123", optional = true }
 
+
+[dependencies.cherry-macros]
+version = "0.7"
+
+[dependencies.ormx]
+version = "0.7"
+
 [dev-dependencies]
 
 
 [workspace]
 members = [
-    "cherry-derive",
     "example"
 ]
