@@ -11,13 +11,19 @@ use crate::types::{Pool, Result};
 static POOLS: OnceCell<BTreeMap<TypeId, Pool>> = OnceCell::new();
 
 pub async fn setup_pools<T>(config: T) -> Result<()>
-    where T: IntoIterator<Item = (TypeId, PoolConfig)> {
-    let mut pools = BTreeMap::new();
-    for (key, v) in config {
-        pools.insert(key, v.to_pool().await?);
-    }
+    where T: IntoIterator<Item = (TypeId, PoolConfig)>
+{
+    if POOLS.get().is_none()
+    {
+        let mut pools = BTreeMap::new();
+        for (key, v) in config {
+            pools.insert(key, v.to_pool().await?);
+        }
 
-    POOLS.set(pools).map_err(|_| anyhow!("Failed to set pools."))?;
+        POOLS.set(pools).map_err(|_| anyhow!("Failed to set pools."))?;
+    } else {
+        anyhow!("Failed to set pools.");
+    }
     Ok(())
 }
 

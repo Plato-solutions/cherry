@@ -27,42 +27,11 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
 
             fn insert(
                 self,
-                db: &mut sqlx::MySqlConnection,
-            ) -> #box_future<sqlx::Result<Self::Table>> {
+            ) -> #box_future<'static, sqlx::Result<Self::Table>> {
                 Box::pin(async move {
-                    #insert
-                    #query_id
-                    #query_default
-                    Ok(#construct_row)
-                })
-            }
-        }
-    }
-}
+                    let pool = #table_ident::pool()?;
+                    let mut conn = pool.acquire().await?;
 
-pub fn impl_query(table: &Table<MySqlBackend>) -> TokenStream {
-    let insert_ident = match &table.queryable {
-        Some(i) => &i.ident,
-        None => return quote!(),
-    };
-
-    let table_ident = &table.ident;
-    let box_future = quote!(cherry::exports::futures::future::BoxFuture);
-
-    let insert = insert(&table);
-    let query_id = query_id(&table);
-    let query_default = query_default(&table);
-    let construct_row = construct_row(&table);
-
-    quote! {
-        impl cherry::Insert for #insert_ident {
-            type Table = #table_ident;
-
-            fn insert(
-                self,
-                db: &mut sqlx::MySqlConnection,
-            ) -> #box_future<sqlx::Result<Self::Table>> {
-                Box::pin(async move {
                     #insert
                     #query_id
                     #query_default
@@ -117,7 +86,7 @@ fn query_default(table: &Table<MySqlBackend>) -> TokenStream {
 
     quote! {
         let _generated = sqlx::query!(#query_default_sql, _id)
-            .fetch_one(db)
+            .fetch_one(&mut *conn)
             .await?;
     }
 }
@@ -136,7 +105,7 @@ fn insert(table: &Table<MySqlBackend>) -> TokenStream {
 
     quote! {
         sqlx::query!(#insert_sql, #( self.#insert_field_idents, )*)
-            .execute(db as &mut sqlx::MySqlConnection)
+            .execute(&mut *conn)
             .await?;
     }
 }
@@ -151,7 +120,7 @@ fn query_id(table: &Table<MySqlBackend>) -> TokenStream {
     match table.id.default {
         true => quote! {
             let _id = sqlx::query!("SELECT LAST_INSERT_ID() AS id")
-                .fetch_one(db as &mut sqlx::MySqlConnection)
+                .fetch_one(&mut *conn)
                 .await?
                 .id;
         },

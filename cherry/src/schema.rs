@@ -1,5 +1,4 @@
-use crate::{connection};
-use crate::types::{Arguments, Result, Row, Pool};
+use crate::types::{Arguments, Result, Row};
 
 pub trait Schema: Sized + Send + Unpin {
     /// Return database table name

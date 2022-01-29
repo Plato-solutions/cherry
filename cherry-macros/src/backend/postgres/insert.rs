@@ -72,12 +72,14 @@ pub fn impl_insert(table: &Table<PgBackend>) -> TokenStream {
             type Table = #table_ident;
 
             fn insert(
-                self,
-                db: &mut sqlx::PgConnection,
-            ) -> #box_future<sqlx::Result<Self::Table>> {
+                self
+            ) -> #box_future<'static,sqlx::Result<Self::Table>> {
                 Box::pin(async move {
+                    let pool = #table_ident::pool()?;
+                    let mut conn = pool.acquire().await?;
+
                     let _generated = sqlx::query!(#insert_sql, #( #insert_field_exprs, )*)
-                        .#fetch_funtion(db as &mut sqlx::PgConnection)
+                        .#fetch_funtion(&mut *conndb as &mut sqlx::PgConnection)
                         .await?;
 
                     Ok(Self::Table {

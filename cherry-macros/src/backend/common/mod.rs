@@ -110,11 +110,10 @@ pub fn setters<B: Backend>(table: &Table<B>) -> TokenStream {
             setters.extend(quote! {
                 #vis async fn #fn_name(
                     &mut self,
-                    db: impl sqlx::Executor<'_, Database = cherry::Db>,
                     value: #field_ty
                 ) -> sqlx::Result<()> {
                     sqlx::query!(#sql, value, <Self as cherry::Table>::id(self))
-                        .execute(db)
+                        .execute(Self::pool()?)
                         .await?;
                     self.#field_ident = value;
                     Ok(())
@@ -184,7 +183,7 @@ pub(crate) fn impl_patch<B: Backend>(patch: &Patch) -> TokenStream {
             ) -> #box_future<'a, sqlx::Result<()>> {
                 Box::pin(async move {
                     sqlx::query!(#sql, #( self.#query_args, )* id)
-                        .execute(db)
+                        .execute(Table::pool()?)
                         .await?;
                     Ok(())
                 })

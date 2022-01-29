@@ -1,11 +1,10 @@
-use std::any::Any;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::{
     backend::Backend,
-    table::{Table, TableField},
+    table::{Table},
 };
 
 pub fn impl_schema<B: Backend>(table: &Table<B>) -> TokenStream {

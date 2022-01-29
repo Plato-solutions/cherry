@@ -34,7 +34,7 @@ use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use std::any::TypeId;
 
-use sqlx::{Database, Executor, Result};
+use sqlx::{Executor, Result};
 
 pub use cherry_macros::*;
 use crate::{connection, Schema};
@@ -74,16 +74,15 @@ pub trait Table : Schema
     /// Returns connection to datasource
     fn pool() -> Result<&'static Pool>  {
         Ok(connection::get(Self::datasource())
-            .map_err(|_|{sqlx::error::Error::PoolClosed})?
+            .map_err(|err|{sqlx::error::Error::Configuration(err.into())})?
         )
     }
 
     /// Insert a row into the database.
     fn insert(
-        db: &mut <Db as Database>::Connection,
         row: impl Insert<Table = Self>,
-    ) -> BoxFuture<Result<Self>> {
-        row.insert(db)
+    ) -> BoxFuture<'static,Result<Self>> {
+        row.insert()
     }
 
     /// Queries the row of the given id.
@@ -188,5 +187,5 @@ pub trait Insert
     type Table: Table;
 
     /// Insert a row into the database, returning the inserted row.
-    fn insert(self, db: &mut <Db as Database>::Connection) -> BoxFuture<Result<Self::Table>>;
+    fn insert(self) -> BoxFuture<'static, Result<Self::Table>>;
 }
