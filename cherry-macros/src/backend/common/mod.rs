@@ -56,11 +56,10 @@ pub(crate) fn getters<B: Backend>(table: &Table<B>) -> TokenStream {
 pub fn get_one(vis: &Visibility, ident: &Ident, by_ty: &Type, sql: &str) -> TokenStream {
     quote! {
         #vis async fn #ident(
-            db: impl sqlx::Executor<'_, Database = cherry::Db>,
             by: #by_ty,
         ) -> sqlx::Result<Self> {
             sqlx::query_as!(Self, #sql, by)
-                .fetch_one(db)
+                .fetch_one(Self::pool()?)
                 .await
         }
     }
@@ -69,11 +68,10 @@ pub fn get_one(vis: &Visibility, ident: &Ident, by_ty: &Type, sql: &str) -> Toke
 pub fn get_optional(vis: &Visibility, ident: &Ident, by_ty: &Type, sql: &str) -> TokenStream {
     quote! {
         #vis async fn #ident(
-            db: impl sqlx::Executor<'_, Database = cherry::Db>,
             by: #by_ty,
         ) -> sqlx::Result<Option<Self>> {
             sqlx::query_as!(Self, #sql, by)
-                .fetch_optional(db)
+                .fetch_optional(Self::pool()?)
                 .await
         }
     }
@@ -82,11 +80,10 @@ pub fn get_optional(vis: &Visibility, ident: &Ident, by_ty: &Type, sql: &str) ->
 pub fn get_many(vis: &Visibility, ident: &Ident, by_ty: &Type, sql: &str) -> TokenStream {
     quote! {
         #vis async fn #ident(
-            db: impl sqlx::Executor<'_, Database = cherry::Db>,
             by: #by_ty,
         ) -> sqlx::Result<Vec<Self>> {
             sqlx::query_as!(Self, #sql, by)
-                .fetch_all(db)
+                .fetch_all(Self::pool()?)
                 .await
         }
     }
