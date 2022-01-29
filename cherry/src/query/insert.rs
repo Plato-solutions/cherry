@@ -2,7 +2,7 @@ use std::any::TypeId;
 
 use sql_builder::SqlBuilder;
 
-use crate::{Cherry, connection, gen_execute};
+use crate::{Schema, connection, gen_execute};
 use crate::query::query_builder::QueryBuilder;
 use crate::types::{QueryResult, Result, Transaction};
 
@@ -15,7 +15,7 @@ pub struct Insert<'a> {
 
 impl<'a> Insert<'a> {
 
-    pub(crate) fn new<T>(datasource: TypeId) -> Self where T: Cherry {
+    pub(crate) fn new<T>(datasource: TypeId) -> Self where T: Schema {
         Self {
             query: QueryBuilder::new::<T>(datasource, SqlBuilder::insert_into(T::table())),
             columns: T::columns(),
@@ -24,21 +24,21 @@ impl<'a> Insert<'a> {
         }
     }
 
-    pub(crate) fn insert<T>(datasource: TypeId, v: &'a T) -> Self where T: Cherry {
+    pub(crate) fn insert<T>(datasource: TypeId, v: &'a T) -> Self where T: Schema {
         let mut t = Self::new::<T>(datasource);
         t.size = 1;
         v.arguments(&mut t.query.arguments);
         t
     }
 
-    pub(crate) fn insert_bulk<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Cherry {
+    pub(crate) fn insert_bulk<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Schema {
         let mut t = Self::new::<T>(datasource);
         t.size = v.len();
         v.iter().for_each(|v| v.arguments(&mut t.query.arguments) );
         t
     }
 
-    pub(crate) fn insert_ignore<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Cherry {
+    pub(crate) fn insert_ignore<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Schema {
         let mut t = Self::new::<T>(datasource);
         t.size = v.len();
         t.replace = Some(("INSERT".into(), "INSERT IGNORE".into()));
@@ -46,7 +46,7 @@ impl<'a> Insert<'a> {
         t
     }
 
-    pub(crate) fn insert_replace<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Cherry {
+    pub(crate) fn insert_replace<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Schema {
         let mut t = Self::new::<T>(datasource);
         t.size = v.len();
         t.replace = Some(("INSERT INTO".into(), "REPLACE INTO".into()));

@@ -84,16 +84,25 @@ macro_rules! gen_where {
         pub fn and_where_like<S, V>(mut self, f: S, v: V) -> Self
             where
                 S: ToString,
-                V: Encode<'a, Database> + Type<Database> + Send + 'a
+                V: ToString,
         {
             self.query.and_where_like(f, v);
+            self
+        }
+
+        pub fn and_where_like_any<S, V>(mut self, f: S, v: V) -> Self
+            where
+                S: ToString,
+                V: ToString,
+        {
+            self.query.and_where_like_any(f, v);
             self
         }
 
         pub fn and_where_not_like<S, V>(mut self, f: S, v: V) -> Self
             where
                 S: ToString,
-                V: Encode<'a, Database> + Type<Database> + Send + 'a
+                V: ToString,
         {
             self.query.and_where_not_like(f, v);
             self

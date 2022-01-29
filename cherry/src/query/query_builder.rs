@@ -5,7 +5,7 @@ use sql_builder::SqlBuilder;
 use sqlx::{Arguments as SqlxArguments, Type};
 use sqlx::encode::Encode;
 
-use crate::Cherry;
+use crate::Schema;
 use crate::types::{Arguments, Database};
 
 pub(crate) struct QueryBuilder<'a> {
@@ -17,7 +17,7 @@ pub(crate) struct QueryBuilder<'a> {
 
 impl<'a> QueryBuilder<'a> {
     
-    pub(crate) fn new<T: Cherry>(datasource: TypeId, sql_builder: SqlBuilder) -> Self {
+    pub(crate) fn new<T: Schema>(datasource: TypeId, sql_builder: SqlBuilder) -> Self {
         Self { _keep: PhantomData, datasource, sql_builder, arguments: Arguments::default() }
     }
 
@@ -94,20 +94,30 @@ impl<'a> QueryBuilder<'a>{
     pub(crate) fn and_where_like<S, V>(&mut self, f: S, v: V) -> &mut Self
         where
             S: ToString,
-            V: Encode<'a, Database> + Type<Database> + Send + 'a
+            V: ToString,
     {
-        self.sql_builder.and_where_like(f, '?');
-        self.arguments.add(v);
+        self.sql_builder.and_where_like(f, v);
+        // self.arguments.add(v);
+        self
+    }
+
+    pub(crate) fn and_where_like_any<S, V>(&mut self, f: S, v: V) -> &mut Self
+        where
+            S: ToString,
+            V: ToString,
+    {
+        self.sql_builder.and_where_like_any(f, v);
+        // self.arguments.add(v);
         self
     }
 
     pub(crate) fn and_where_not_like<S, V>(&mut self, f: S, v: V) -> &mut Self
         where
             S: ToString,
-            V: Encode<'a, Database> + Type<Database> + Send + 'a
+            V: ToString,
     {
-        self.sql_builder.and_where_not_like(f, '?');
-        self.arguments.add(v);
+        self.sql_builder.and_where_not_like(f, v);
+        // self.arguments.add(v);
         self
     }
 

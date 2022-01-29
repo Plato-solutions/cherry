@@ -5,7 +5,7 @@ use sql_builder::SqlBuilder;
 use sqlx::encode::Encode;
 use sqlx::types::Type;
 
-use crate::{Cherry, connection, gen_where};
+use crate::{Schema, connection, gen_where};
 use crate::query::query_builder::QueryBuilder;
 use crate::types::{Database, Result};
 
@@ -14,7 +14,7 @@ pub struct Select<'a, T> {
     pub(crate) query: QueryBuilder<'a>,
 }
 
-impl<'a, T> Select<'a, T> where T: Cherry {
+impl<'a, T> Select<'a, T> where T: Schema {
 
     pub(crate) fn new(datasource: TypeId) -> Self {
         Self {

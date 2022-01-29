@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use sql_builder::SqlBuilder;
 use sqlx::{Encode, Type};
 
-use crate::{Cherry, connection, gen_execute, gen_where};
+use crate::{Schema, connection, gen_execute, gen_where};
 use crate::query::query_builder::QueryBuilder;
 use crate::types::{Database, QueryResult, Result, Transaction};
 
@@ -17,7 +17,7 @@ pub struct InsertUpdate<'a> {
 
 impl<'a> InsertUpdate<'a> {
 
-    fn new<T>(datasource: TypeId) -> Self where T: Cherry {
+    fn new<T>(datasource: TypeId) -> Self where T: Schema {
         Self {
             query: QueryBuilder::new::<T>(datasource, SqlBuilder::insert_into(T::table())),
             columns: T::columns(),
@@ -26,7 +26,7 @@ impl<'a> InsertUpdate<'a> {
         }
     }
 
-    pub(crate) fn insert_update<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Cherry {
+    pub(crate) fn insert_update<T>(datasource: TypeId, v: &'a [T]) -> Self where T: Schema {
         let mut t = Self::new::<T>(datasource);
         t.size = v.len();
         v.iter().for_each(|v| v.arguments(&mut t.query.arguments) );
