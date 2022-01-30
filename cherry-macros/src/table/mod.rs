@@ -48,10 +48,6 @@ impl<B: Backend> Table<B> {
         self.fields.iter().filter(|field| !field.default)
     }
 
-    pub fn queryable_fields(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
-        self.fields.iter()
-    }
-
     pub fn default_fields(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
         self.fields.iter().filter(|field| field.default)
     }

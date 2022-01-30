@@ -6,7 +6,7 @@ use syn::{Ident, Type, Visibility};
 
 pub use table::*;
 
-use crate::attrs::{Insertable,Queryable};
+use crate::attrs::{Insertable};
 use crate::backend::Backend;
 use crate::patch::Patch;
 use crate::table::Table;
@@ -194,29 +194,6 @@ pub(crate) fn impl_patch<B: Backend>(patch: &Patch) -> TokenStream {
 
 pub(crate) fn insert_struct<B: Backend>(table: &Table<B>) -> TokenStream {
     let Insertable { ident, attrs } = match &table.insertable {
-        Some(i) => i,
-        None => return quote!(),
-    };
-    let vis = &table.vis;
-    let insert_fields = table.insertable_fields().map(|field| {
-        let ident = &field.field;
-        let ty = &field.ty;
-        quote!(#vis #ident: #ty)
-    });
-
-    let from_impl = impl_from_for_insert_struct(table, ident);
-    quote! {
-        #(#attrs)*
-        #vis struct #ident {
-            #( #insert_fields, )*
-        }
-
-        #from_impl
-    }
-}
-
-pub(crate) fn query_struct<B: Backend>(table: &Table<B>) -> TokenStream {
-    let Queryable { ident, attrs } = match &table.queryable {
         Some(i) => i,
         None => return quote!(),
     };
