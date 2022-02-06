@@ -40,6 +40,8 @@ pub enum TableFieldAttr {
     GetMany(Getter),
     // set [= <ident>]?
     Set(Option<Ident>),
+    // pk
+    PrimaryKey(()),
 }
 
 #[derive(Clone)]
@@ -164,7 +166,8 @@ impl_parse!(TableFieldAttr {
     "get_many" => GetMany(Getter),
     "set" => Set((= Ident)?),
     "custom_type" => CustomType(),
-    "default" => Default()
+    "default" => Default(),
+    "pk" => PrimaryKey()
 });
 
 impl_parse!(PatchAttr {

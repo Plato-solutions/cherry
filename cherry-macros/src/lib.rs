@@ -1,5 +1,7 @@
 #![cfg(any(feature = "mysql", feature = "postgres", feature = "sqlite"))]
 
+extern crate inflector;
+
 use proc_macro2::TokenStream;
 
 mod attrs;

@@ -26,6 +26,10 @@ pub trait Backend: Sized + Clone {
 
     type Bindings: Iterator<Item = Cow<'static, str>> + Default;
 
+    fn impl_primary_key(table: &Table<Self>) -> TokenStream {
+        common::primary_key::<Self>(table)
+    }
+
     /// Generate an `impl <Table>` block, containing getter methods
     fn impl_getters(table: &Table<Self>) -> TokenStream {
         common::getters::<Self>(table)
@@ -39,6 +43,11 @@ pub trait Backend: Sized + Clone {
     /// Generate an `impl Table for <Table>` block
     fn impl_table(table: &Table<Self>) -> TokenStream {
         common::impl_table::<Self>(table)
+    }
+
+    /// Generate an `impl IdTable for <IdTable>` block
+    fn impl_id_table(table: &Table<Self>) -> TokenStream {
+        common::impl_id_table::<Self>(table)
     }
 
     /// Generate an `impl Table for <Table>` block

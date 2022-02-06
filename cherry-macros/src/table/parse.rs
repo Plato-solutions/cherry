@@ -35,7 +35,8 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
             get_optional,
             get_many,
             set,
-            default
+            default,
+            primary_key
         );
 
         for attr in parse_attrs::<TableFieldAttr>(&value.attrs)? {
@@ -50,6 +51,7 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
                     set_once(&mut set, s.unwrap_or_else(default))?
                 }
                 TableFieldAttr::Default(..) => set_once(&mut default, true)?,
+                TableFieldAttr::PrimaryKey(..) => set_once(&mut primary_key, true)?,
             }
         }
         Ok(TableField {
@@ -58,6 +60,7 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
             ty: value.ty.clone(),
             custom_type: custom_type.unwrap_or(false),
             reserved_ident,
+            pk: primary_key.unwrap_or(false),
             default: default.unwrap_or(false),
             get_one,
             get_optional,
@@ -98,7 +101,6 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Table<B> {
                 _ => {}
             }
         }
-
 
         let id = if let Some(i) = id {
             Some(fields

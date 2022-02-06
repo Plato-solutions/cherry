@@ -22,12 +22,14 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
     let construct_row = construct_row(&table);
 
     quote! {
+        impl cherry::Insertable for #table_ident {}
+
         impl cherry::Insert for #insert_ident {
             type Table = #table_ident;
 
             fn insert(
                 self,
-            ) -> #box_future<'static,sqlx::Result<Self::Table>> {
+            ) -> #box_future<'static,sqlx::Result<Option<Self::Table>>> {
                 Box::pin(async move {
                     let mut pool = #table_ident::pool()?;
                     let mut conn = pool.acquire().await?;
@@ -39,7 +41,7 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
             fn insert_with(
                 self,
                 db: &mut sqlx::MySqlConnection,
-            ) -> #box_future<sqlx::Result<Self::Table>> {
+            ) -> #box_future<sqlx::Result<Option<Self::Table>>> {
                 Box::pin(async move {
                     // let mut pool = #table_ident::pool()?;
                     // let mut q = pool.acquire().await?;
@@ -60,27 +62,53 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
 /// - `_generated` (see `query_default` below)
 /// - all fields already present in the insert struct
 fn construct_row(table: &Table<MySqlBackend>) -> TokenStream {
-    let id_ident = &table.id.as_ref().unwrap().field;
-    let insert_field_idents = table
-        .insertable_fields()
-        .map(|f| &f.field)
-        .filter(|f| *f != id_ident);
-    let default_field_idents = table
-        .default_fields()
-        .map(|f| &f.field)
-        .filter(|f| *f != id_ident);
+    if let Some(i) = &table.id {
+        let id_ident = &i.field;
+        let insert_field_idents = table
+            .insertable_fields()
+            .map(|f| &f.field)
+            .filter(|f| *f != id_ident);
+        let default_field_idents = table
+            .default_fields()
+            .map(|f| &f.field)
+            .filter(|f| *f != id_ident);
 
-    quote! {
-        Self::Table {
-            #id_ident: _id as _,
-            #( #insert_field_idents: self.#insert_field_idents, )*
-            #( #default_field_idents: _generated.#default_field_idents, )*
+        quote! {
+            Some(Self::Table {
+                #id_ident: _id as _,
+                #( #insert_field_idents: self.#insert_field_idents, )*
+                #( #default_field_idents: _generated.#default_field_idents, )*
+            })
         }
+    } else {
+        let insert_field_idents = table
+            .insertable_fields()
+            .map(|f| &f.field);
+        let default_field_idents = table
+            .default_fields().peekable().peek().is_none();
+        if !default_field_idents {
+            quote! {
+            Some(Self::Table {
+                #( #insert_field_idents: self.#insert_field_idents, )*
+            })
+        }
+        } else {
+            quote! {
+                None
+            }
+        }
+
+
     }
+
+
 }
 
 /// queries default fields from the database, except the ID.
 fn query_default(table: &Table<MySqlBackend>) -> TokenStream {
+    if table.id.is_none() {
+        return quote!();
+    }
     let mut default_fields = table
         .default_fields()
         .filter(|f| f.field != table.id.as_ref().unwrap().field)
@@ -131,16 +159,20 @@ fn insert_with(table: &Table<MySqlBackend>) -> TokenStream {
 /// case 2:
 ///     The ID is already known, so we can just use it.
 fn query_id(table: &Table<MySqlBackend>) -> TokenStream {
-    match table.id.as_ref().unwrap().default {
-        true => quote! {
+
+    match &table.id {
+        Some(id) => match id.default {
+            true => quote! {
             let _id = sqlx::query!("SELECT LAST_INSERT_ID() AS id")
                 .fetch_one(db as &mut sqlx::MySqlConnection)
                 .await?
                 .id;
         },
-        false => {
-            let id_ident = &table.id.as_ref().unwrap().field;
-            quote!(let _id = self.#id_ident;)
+            false => {
+                let id_ident = &table.id.as_ref().unwrap().field;
+                quote!(let _id = self.#id_ident;)
+            }
         }
+        None => quote!{}
     }
 }

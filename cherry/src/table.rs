@@ -67,12 +67,6 @@ pub trait Table : Schema
     where
         Self: Sized + Send + Sync + 'static,
 {
-    /// Type of the ID column of this table.
-    type Id: 'static + Copy + Send;
-
-    /// Returns the id of this row.
-    fn id(&self) -> Self::Id;
-
     /// Returns connection to datasource
     fn pool() -> Result<&'static Pool>  {
         Ok(connection::get(Self::datasource())
@@ -86,26 +80,6 @@ pub trait Table : Schema
     //         .begin().await.map_err(|err|{sqlx::error::Error::Configuration(err.into())})?
     //     )
     // }
-
-    /// Insert a row into the database.
-    fn insert(
-        row: impl Insert<Table = Self>,
-    ) -> BoxFuture<'static,Result<Self>> {
-        row.insert()
-    }
-
-    /// Insert a row into the database.
-    fn insert_with(
-        db: &mut <Db as sqlx::Database>::Connection,
-        row: impl Insert<Table = Self>,
-    ) -> BoxFuture<Result<Self>> {
-        row.insert_with(db)
-    }
-
-    /// Queries the row of the given id.
-    fn get<'a>(
-        id: Self::Id,
-    ) -> BoxFuture<'a, Result<Self>>;
 
     /// Stream all rows from this table.
     fn stream_all<'a>(
@@ -132,6 +106,25 @@ pub trait Table : Schema
 
         Box::pin(Self::stream_all_paginated( offset, limit).try_collect())
     }
+}
+
+/// A database table in which each row is identified by a unique ID.
+#[async_trait]
+pub trait IdTable : Table
+    where
+        Self: Sized + Send + Sync + 'static,
+{
+    /// Type of the ID column of this table.
+    type Id: 'static + Copy + Send;
+
+    /// Returns the id of this row.
+    fn id(&self) -> Self::Id;
+
+    /// Queries the row of the given id.
+    fn get<'a>(
+        id: Self::Id,
+    ) -> BoxFuture<'a, Result<Self>>;
+
     /// Applies a patch to this row.
     fn patch<P>(
         &mut self,
@@ -205,12 +198,35 @@ pub trait Table : Schema
     }
 }
 
+/// A database table in which each row is identified by a unique ID.
+#[async_trait]
+pub trait Insertable : Table
+    where
+        Self: Sized + Send + Sync + 'static,
+{
+
+    /// Insert a row into the database.
+    fn insert(
+        row: impl Insert<Table = Self>,
+    ) -> BoxFuture<'static,Result<Option<Self>>> {
+        row.insert()
+    }
+
+    /// Insert a row into the database.
+    fn insert_with(
+        db: &mut <Db as sqlx::Database>::Connection,
+        row: impl Insert<Table = Self>,
+    ) -> BoxFuture<Result<Option<Self>>> {
+        row.insert_with(db)
+    }
+}
+
 /// A type which can be used to "patch" a row, updating multiple fields at once.
 pub trait Patch
     where
         Self: Sized + Send + Sync + 'static,
 {
-    type Table: Table;
+    type Table: IdTable;
 
     /// Applies the data of this patch to the given entity.
     /// This does not persist the change in the database.
@@ -219,14 +235,14 @@ pub trait Patch
     /// Applies this patch to a row in the database.
     fn patch_row<'a, 'c: 'a>(
         &'a self,
-        id: <Self::Table as Table>::Id,
+        id: <Self::Table as IdTable>::Id,
     ) -> BoxFuture<'a, Result<()>>;
 
     /// Applies this patch to a row in the database.
     fn patch_row_with<'a, 'c: 'a>(
         &'a self,
         db: impl Executor<'c, Database = Db> + 'a,
-        id: <Self::Table as Table>::Id,
+        id: <Self::Table as IdTable>::Id,
     ) -> BoxFuture<'a, Result<()>>;
 }
 
@@ -238,11 +254,11 @@ pub trait Insert
     type Table: Table;
 
     /// Insert a row into the database, returning the inserted row.
-    fn insert(self) -> BoxFuture<'static,Result<Self::Table>>;
+    fn insert(self) -> BoxFuture<'static,Result<Option<Self::Table>>>;
 
     /// Insert a row into the database, returning the inserted row.
     fn insert_with(
         self,
         db: &mut <Db as sqlx::Database>::Connection,
-    ) -> BoxFuture<Result<Self::Table>>;
+    ) -> BoxFuture<Result<Option<Self::Table>>>;
 }

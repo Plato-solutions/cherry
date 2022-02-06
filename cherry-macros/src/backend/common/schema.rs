@@ -52,6 +52,20 @@ fn columns<B: Backend>(table: &Schema<B>) -> TokenStream {
             }
     }
 }
+//
+// fn primary_key<B: Backend>(table: &Schema<B>) -> TokenStream {
+//     let arguments : proc_macro2::TokenStream = table.fields
+//         .iter().map(|s|
+//         format!(" arguments.add(&self.{}); ", s.field)
+//     ).collect::<String>().parse().unwrap();
+//
+//     quote! {
+//         fn primary_key<'a>(&'a self, arguments: &mut cherry::types::Arguments<'a>) {
+//             use cherry::sqlx::Arguments as OtherArguments;
+//             #arguments
+//         }
+//     }
+// }
 
 fn arguments<B: Backend>(table: &Schema<B>) -> TokenStream {
     let arguments : proc_macro2::TokenStream = table.fields

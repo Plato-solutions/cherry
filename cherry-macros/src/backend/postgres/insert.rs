@@ -73,7 +73,7 @@ pub fn impl_insert(table: &Table<PgBackend>) -> TokenStream {
 
             fn insert(
                 self
-            ) -> #box_future<'static,sqlx::Result<Self::Table>> {
+            ) -> #box_future<'static,sqlx::Result<Option<Self::Table>>> {
                 Box::pin(async move {
                     let pool = #table_ident::pool()?;
                     let mut conn = pool.acquire().await?;

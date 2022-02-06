@@ -1,30 +1,68 @@
+use std::str::FromStr;
+use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{quote, TokenStreamExt};
 
 use crate::backend::Backend;
 use crate::table::Table;
 
+
 pub fn impl_table<B: Backend>(table: &Table<B>) -> TokenStream {
     let table_ident = &table.ident;
+    let pk_trait = &table.primary_key_trait();
+    let primary_key_types_traits = table.primary_key_types_trait();
+    let primary_key_types = table.primary_key_types();
+    let column_list = table.select_column_list();
+
+    let stream_all = stream_all(table, &column_list);
+    let stream_all_paginated = stream_all_paginated::<B>(table, &column_list);
+
+    quote! {
+        pub trait #pk_trait : cherry::Table //@TODO have pk_trait extend a base primary key trait, and hide all of the dynamic pieces within it to preserve Table have a shared base trait
+        {
+            #primary_key_types_traits
+
+            fn pk(&self) -> Self::PkId; //@TODO work through making these PK values and types derived
+
+        }
+
+        impl #pk_trait for #table_ident {
+            #primary_key_types
+
+            fn pk(&self) -> Self::PkId {
+                self.id
+            }
+        }
+
+        impl cherry::Table for #table_ident {
+            #stream_all
+            #stream_all_paginated
+        }
+    }
+}
+
+pub fn impl_id_table<B: Backend>(table: &Table<B>) -> TokenStream {
+    if table.primary_key_fields().peekable().peek().is_some() {
+
+    }
+
+    if table.id.is_none() {
+        return quote!{}
+    }
+    let pk_trait = &table.primary_key_trait();
+    let table_ident = &table.ident;
+
     let id_ident = &table.id.as_ref().unwrap().field;
     let id_ty = &table.id.as_ref().unwrap().ty;
     let column_list = table.select_column_list();
 
     let get = get::<B>(table, &column_list);
-    let stream_all = stream_all(table, &column_list);
-    let stream_all_paginated = stream_all_paginated::<B>(table, &column_list);
     let update = update::<B>(table);
     let delete = delete::<B>(table);
 
     quote! {
-        impl cherry::Table for #table_ident {
-            type Id = #id_ty;
-
-            fn id(&self) -> Self::Id { self.#id_ident }
-
+        impl #table_ident {
             #get
-            #stream_all
-            #stream_all_paginated
             #update
             #delete
         }
@@ -41,14 +79,36 @@ fn get<B: Backend>(table: &Table<B>, column_list: &str) -> TokenStream {
         B::Bindings::default().next().unwrap()
     );
 
+    let pk_trait = &table.primary_key_trait();
+
+    let pm_args:TokenStream = table.primary_key_fields().map(|field| {
+            let field_pk = &field.fmt_for_pk();
+            quote!{id: <Self as #pk_trait>::#field_pk,}
+        })
+            .collect();
+
+
+
+
     quote! {
-        fn get<'a>(
-            id: Self::Id,
+        pub fn get<'a>(
+            #pm_args
+            //@TODO need to get primary_key fields here
         ) -> #box_future<'a, sqlx::Result<Self>> {
             Box::pin(async move {
                 sqlx::query_as!(Self, #get_sql, id)
                     .fetch_one(Self::pool()?)
                     .await
+            })
+        }
+
+        // Refresh this row, querying all columns from the database.
+        fn reload(
+            &mut self,
+        ) -> #box_future<sqlx::Result<()>> {
+            Box::pin(async move {
+                *self = Self::get(self.id).await?;
+                Ok(())
             })
         }
     }
@@ -85,7 +145,7 @@ fn update<B: Backend>(table: &Table<B>) -> TokenStream {
     });
 
     quote! {
-        fn update<'a>(
+        pub fn update<'a>(
             &'a self,
         ) -> #box_future<'a, sqlx::Result<()>> {
             Box::pin(async move {
@@ -164,7 +224,26 @@ fn delete<B: Backend>(table: &Table<B>) -> TokenStream {
     let result_import = quote!(sqlx::sqlite::SqliteQueryResult);
 
     quote! {
-        fn delete_row_with<'a, 'c: 'a>(
+
+        /// Deletes this row from the database.
+        pub fn delete<'a>(
+            self,
+        ) -> #box_future<'a, sqlx::Result<()>> {
+            Box::pin(async move {
+                Self::delete_row_with(Self::pool()?, self.id).await
+            })
+        }
+
+        /// Delete a row from the database
+        fn delete_row<'a>(
+            id: #id_ty,
+        ) -> #box_future<'a, sqlx::Result<()>> {
+            Box::pin(async move {
+                Self::delete_row_with( Self::pool()?,id).await
+            })
+        }
+
+        pub fn delete_row_with<'a, 'c: 'a>(
             db: impl sqlx::Executor<'c, Database = cherry::Db> + 'a,
             id: #id_ty
         ) -> #box_future<'a, sqlx::Result<()>> {

@@ -15,6 +15,10 @@ use crate::table::Table;
 mod table;
 mod schema;
 
+pub(crate) fn primary_key<B: Backend>(table: &Table<B>) -> TokenStream {
+    quote!{}
+}
+
 pub(crate) fn getters<B: Backend>(table: &Table<B>) -> TokenStream {
     if table.id.is_none() {
         return quote!{}
