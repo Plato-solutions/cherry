@@ -38,7 +38,11 @@ use sqlx::{Executor, Result};
 
 pub use cherry_macros::*;
 use crate::{connection, Schema};
+use crate::query::select::Select;
 use crate::types::{Pool};
+use crate::types::Transaction;
+use async_trait::async_trait;
+
 
 
 #[doc(hidden)]
@@ -58,6 +62,7 @@ pub type Db = sqlx::Postgres;
 pub type Db = sqlx::Sqlite;
 
 /// A database table in which each row is identified by a unique ID.
+#[async_trait]
 pub trait Table : Schema
     where
         Self: Sized + Send + Sync + 'static,
@@ -68,15 +73,19 @@ pub trait Table : Schema
     /// Returns the id of this row.
     fn id(&self) -> Self::Id;
 
-    /// Returns datasource to store and receive data for structure
-    fn datasource() -> TypeId;
-
     /// Returns connection to datasource
     fn pool() -> Result<&'static Pool>  {
         Ok(connection::get(Self::datasource())
             .map_err(|err|{sqlx::error::Error::Configuration(err.into())})?
         )
     }
+    // /// Returns connection to datasource
+    // async fn begin() -> Result<Transaction<'static>>  {
+    //     Ok(connection::get(Self::datasource())
+    //         .map_err(|err|{sqlx::error::Error::Configuration(err.into())})?
+    //         .begin().await.map_err(|err|{sqlx::error::Error::Configuration(err.into())})?
+    //     )
+    // }
 
     /// Insert a row into the database.
     fn insert(
@@ -85,29 +94,37 @@ pub trait Table : Schema
         row.insert()
     }
 
+    /// Insert a row into the database.
+    fn insert_with(
+        db: &mut <Db as sqlx::Database>::Connection,
+        row: impl Insert<Table = Self>,
+    ) -> BoxFuture<Result<Self>> {
+        row.insert_with(db)
+    }
+
     /// Queries the row of the given id.
-    fn get<'a, 'c: 'a>(
+    fn get<'a>(
         id: Self::Id,
     ) -> BoxFuture<'a, Result<Self>>;
 
     /// Stream all rows from this table.
-    fn stream_all<'a, 'c: 'a>(
+    fn stream_all<'a>(
     ) -> BoxStream<'a, Result<Self>>;
 
-    fn stream_all_paginated<'a, 'c: 'a>(
+    fn stream_all_paginated<'a>(
         offset: i64,
         limit: i64,
     ) -> BoxStream<'a, Result<Self>>;
 
     /// Load all rows from this table.
-    fn all<'a, 'c: 'a>(
+    fn all<'a>(
     ) -> BoxFuture<'a, Result<Vec<Self>>> {
         use futures::TryStreamExt;
 
         Box::pin(Self::stream_all().try_collect())
     }
 
-    fn all_paginated<'a, 'c: 'a>(
+    fn all_paginated<'a>(
         offset: i64,
         limit: i64,
     ) -> BoxFuture<'a, Result<Vec<Self>>> {
@@ -116,31 +133,36 @@ pub trait Table : Schema
         Box::pin(Self::stream_all_paginated( offset, limit).try_collect())
     }
     /// Applies a patch to this row.
-    fn patch<'a, 'c: 'a, P>(
-        &'a mut self,
-        db: impl Executor<'c, Database = Db> + 'a,
+    fn patch<P>(
+        &mut self,
         patch: P,
-    ) -> BoxFuture<'a, Result<()>>
+    ) -> BoxFuture<Result<()>>
         where
             P: Patch<Table = Self>,
     {
         Box::pin(async move {
             let patch: P = patch;
-            patch.patch_row(db, self.id()).await?;
+            patch.patch_row(self.id()).await?;
             patch.apply_to(self);
             Ok(())
         })
     }
 
     /// Updates all fields of this row, regardless if they have been changed or not.
-    fn update<'a, 'c: 'a>(
+    fn update(
+        &self,
+    ) -> BoxFuture<Result<()>>;
+
+    /// Updates all fields of this row, regardless if they have been changed or not.
+    fn update_with<'a, 'c: 'a>(
         &'a self,
+        db: impl Executor<'c, Database = Db> + 'a,
     ) -> BoxFuture<'a, Result<()>>;
 
     // Refresh this row, querying all columns from the database.
-    fn reload<'a, 'c: 'a>(
-        &'a mut self,
-    ) -> BoxFuture<'a, Result<()>> {
+    fn reload(
+        &mut self,
+    ) -> BoxFuture<Result<()>> {
         Box::pin(async move {
             *self = Self::get(self.id()).await?;
             Ok(())
@@ -148,15 +170,38 @@ pub trait Table : Schema
     }
 
     /// Delete a row from the database
-    fn delete_row<'a, 'c: 'a>(
+    fn delete_row<'a>(
+        id: Self::Id,
+    ) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move {
+            Self::delete_row_with( Self::pool()?,id).await
+        })
+    }
+
+    /// Delete a row from the database
+    fn delete_row_with<'a, 'c: 'a>(
+        db: impl Executor<'c, Database = Db> + 'a,
         id: Self::Id,
     ) -> BoxFuture<'a, Result<()>>;
 
+
     /// Deletes this row from the database.
-    fn delete<'a, 'c: 'a>(
+    fn delete<'a>(
         self,
     ) -> BoxFuture<'a, Result<()>> {
-        Self::delete_row( self.id())
+        Box::pin(async move {
+            Self::delete_row_with(Self::pool()?, self.id()).await
+        })
+    }
+
+    /// Deletes this row from the database.
+    fn delete_with<'a, 'c: 'a>(
+        self,
+        db: impl Executor<'c, Database = Db> + 'a,
+    ) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move {
+            Self::delete_row_with(db, self.id()).await
+        })
     }
 }
 
@@ -174,6 +219,12 @@ pub trait Patch
     /// Applies this patch to a row in the database.
     fn patch_row<'a, 'c: 'a>(
         &'a self,
+        id: <Self::Table as Table>::Id,
+    ) -> BoxFuture<'a, Result<()>>;
+
+    /// Applies this patch to a row in the database.
+    fn patch_row_with<'a, 'c: 'a>(
+        &'a self,
         db: impl Executor<'c, Database = Db> + 'a,
         id: <Self::Table as Table>::Id,
     ) -> BoxFuture<'a, Result<()>>;
@@ -187,5 +238,11 @@ pub trait Insert
     type Table: Table;
 
     /// Insert a row into the database, returning the inserted row.
-    fn insert(self) -> BoxFuture<'static, Result<Self::Table>>;
+    fn insert(self) -> BoxFuture<'static,Result<Self::Table>>;
+
+    /// Insert a row into the database, returning the inserted row.
+    fn insert_with(
+        self,
+        db: &mut <Db as sqlx::Database>::Connection,
+    ) -> BoxFuture<Result<Self::Table>>;
 }

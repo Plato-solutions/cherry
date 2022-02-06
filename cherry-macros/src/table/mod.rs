@@ -11,16 +11,15 @@ use std::borrow::Cow;
 use std::marker::PhantomData;
 
 mod parse;
+use crate::schema::Schema;
 
 pub struct Table<B: Backend> {
     pub ident: Ident,
     pub vis: Visibility,
     pub table: String,
-    pub id: TableField<B>,
+    pub id: Option<TableField<B>>,
     pub fields: Vec<TableField<B>>,
     pub insertable: Option<Insertable>,
-    pub queryable: Option<Queryable>,
-    pub datasource: Ident,
 }
 
 #[derive(Clone)]
@@ -40,7 +39,7 @@ pub struct TableField<B: Backend> {
 
 impl<B: Backend> Table<B> {
     pub fn fields_except_id(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
-        let id = self.id.field.clone();
+        let id = self.id.as_ref().unwrap().field.clone();
         self.fields.iter().filter(move |field| field.field != id)
     }
 
@@ -100,12 +99,15 @@ impl Getter {
     }
 }
 
-pub fn derive(input: DeriveInput) -> Result<TokenStream> {
-    let parsed = Table::try_from(&input)?;
+pub fn derive(input: &DeriveInput) -> Result<TokenStream> {
+    let parsed = Table::try_from(input)?;
+
 
     let impl_table = Implementation::impl_table(&parsed);
+
     let insert_struct = Implementation::insert_struct(&parsed);
     let impl_insert = Implementation::impl_insert(&parsed);
+
     let getters = Implementation::impl_getters(&parsed);
     let setters = Implementation::impl_setters(&parsed);
 

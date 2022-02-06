@@ -3,13 +3,11 @@ use quote::{quote, TokenStreamExt};
 
 use crate::backend::Backend;
 use crate::table::Table;
-use super::schema;
 
 pub fn impl_table<B: Backend>(table: &Table<B>) -> TokenStream {
     let table_ident = &table.ident;
-    let id_ident = &table.id.field;
-    let id_ty = &table.id.ty;
-    let datasource = &table.datasource;
+    let id_ident = &table.id.as_ref().unwrap().field;
+    let id_ty = &table.id.as_ref().unwrap().ty;
     let column_list = table.select_column_list();
 
     let get = get::<B>(table, &column_list);
@@ -17,15 +15,12 @@ pub fn impl_table<B: Backend>(table: &Table<B>) -> TokenStream {
     let stream_all_paginated = stream_all_paginated::<B>(table, &column_list);
     let update = update::<B>(table);
     let delete = delete::<B>(table);
-    let impl_schema = schema::impl_schema(table);
-
 
     quote! {
         impl cherry::Table for #table_ident {
             type Id = #id_ty;
 
             fn id(&self) -> Self::Id { self.#id_ident }
-            fn datasource() -> std::any::TypeId { std::any::TypeId::of::<#datasource>() }
 
             #get
             #stream_all
@@ -33,8 +28,6 @@ pub fn impl_table<B: Backend>(table: &Table<B>) -> TokenStream {
             #update
             #delete
         }
-
-        #impl_schema
     }
 }
 
@@ -44,12 +37,12 @@ fn get<B: Backend>(table: &Table<B>, column_list: &str) -> TokenStream {
         "SELECT {} FROM {} WHERE {} = {}",
         column_list,
         table.table,
-        table.id.column(),
+        table.id.as_ref().unwrap().column(),
         B::Bindings::default().next().unwrap()
     );
 
     quote! {
-        fn get<'a, 'c: 'a>(
+        fn get<'a>(
             id: Self::Id,
         ) -> #box_future<'a, sqlx::Result<Self>> {
             Box::pin(async move {
@@ -75,10 +68,10 @@ fn update<B: Backend>(table: &Table<B>) -> TokenStream {
         "UPDATE {} SET {} WHERE {} = {}",
         table.table,
         assignments,
-        table.id.column(),
+        table.id.as_ref().unwrap().column(),
         bindings.next().unwrap()
     );
-    let id_argument = &table.id.field;
+    let id_argument = &table.id.as_ref().unwrap().field;
     let other_arguments = table.fields_except_id().map(|field| {
         let ident = &field.field;
         let mut out = quote!(self.#ident);
@@ -92,12 +85,24 @@ fn update<B: Backend>(table: &Table<B>) -> TokenStream {
     });
 
     quote! {
-        fn update<'a, 'c: 'a>(
+        fn update<'a>(
             &'a self,
         ) -> #box_future<'a, sqlx::Result<()>> {
             Box::pin(async move {
+                let mut pool = Self::pool()?;
+                let mut conn = pool.acquire().await?;
+                self.update_with(&mut conn).await?;
+                Ok(())
+            })
+        }
+
+        fn update_with<'a, 'c: 'a>(
+        &'a self,
+        db: impl sqlx::Executor<'c, Database = cherry::Db> + 'a,
+        ) -> #box_future<'a, sqlx::Result<()>> {
+            Box::pin(async move {
                 sqlx::query!(#update_sql, #( #other_arguments, )* self.#id_argument)
-                    .execute(Self::pool()?)
+                    .execute(db)
                     .await?;
                 Ok(())
             })
@@ -110,7 +115,7 @@ fn stream_all<B: Backend>(table: &Table<B>, column_list: &str) -> TokenStream {
     let all_sql = format!("SELECT {} FROM {}", column_list, table.table);
 
     quote! {
-        fn stream_all<'a, 'c: 'a>(
+        fn stream_all<'a>(
         ) -> #box_stream<'a, sqlx::Result<Self>> {
             let pool = Self::pool().unwrap(); //@TODO figure out how to surface this error
             sqlx::query_as!(Self, #all_sql)
@@ -131,7 +136,7 @@ fn stream_all_paginated<B: Backend>(table: &Table<B>, column_list: &str) -> Toke
     );
 
     quote! {
-        fn stream_all_paginated<'a, 'c: 'a>(
+        fn stream_all_paginated<'a>(
             offset: i64,
             limit: i64,
         ) -> #box_stream<'a, sqlx::Result<Self>> {
@@ -144,11 +149,11 @@ fn stream_all_paginated<B: Backend>(table: &Table<B>, column_list: &str) -> Toke
 
 fn delete<B: Backend>(table: &Table<B>) -> TokenStream {
     let box_future = crate::utils::box_future();
-    let id_ty = &table.id.ty;
+    let id_ty = &table.id.as_ref().unwrap().ty;
     let delete_sql = format!(
         "DELETE FROM {} WHERE {} = {}",
         table.table,
-        table.id.column(),
+        table.id.as_ref().unwrap().column(),
         B::Bindings::default().next().unwrap()
     );
     #[cfg(feature = "mysql")]
@@ -159,14 +164,15 @@ fn delete<B: Backend>(table: &Table<B>) -> TokenStream {
     let result_import = quote!(sqlx::sqlite::SqliteQueryResult);
 
     quote! {
-        fn delete_row<'a, 'c: 'a>(
+        fn delete_row_with<'a, 'c: 'a>(
+            db: impl sqlx::Executor<'c, Database = cherry::Db> + 'a,
             id: #id_ty
         ) -> #box_future<'a, sqlx::Result<()>> {
             use #result_import;
 
             Box::pin(async move {
                 let result = sqlx::query!(#delete_sql, id)
-                    .execute(Self::pool()?)
+                    .execute(db)
                     .await?;
                 if result.rows_affected() == 0 {
                     Err(sqlx::Error::RowNotFound)

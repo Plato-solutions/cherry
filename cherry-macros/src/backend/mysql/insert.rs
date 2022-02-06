@@ -16,7 +16,7 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
     let table_ident = &table.ident;
     let box_future = quote!(cherry::exports::futures::future::BoxFuture);
 
-    let insert = insert(&table);
+    let insert_with = insert_with(&table);
     let query_id = query_id(&table);
     let query_default = query_default(&table);
     let construct_row = construct_row(&table);
@@ -27,12 +27,25 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
 
             fn insert(
                 self,
-            ) -> #box_future<'static, sqlx::Result<Self::Table>> {
+            ) -> #box_future<'static,sqlx::Result<Self::Table>> {
                 Box::pin(async move {
-                    let pool = #table_ident::pool()?;
+                    let mut pool = #table_ident::pool()?;
                     let mut conn = pool.acquire().await?;
 
-                    #insert
+                    Ok(self.insert_with(&mut conn).await?)
+                })
+            }
+
+            fn insert_with(
+                self,
+                db: &mut sqlx::MySqlConnection,
+            ) -> #box_future<sqlx::Result<Self::Table>> {
+                Box::pin(async move {
+                    // let mut pool = #table_ident::pool()?;
+                    // let mut q = pool.acquire().await?;
+                    // let mut conn = db;
+
+                    #insert_with
                     #query_id
                     #query_default
                     Ok(#construct_row)
@@ -47,7 +60,7 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
 /// - `_generated` (see `query_default` below)
 /// - all fields already present in the insert struct
 fn construct_row(table: &Table<MySqlBackend>) -> TokenStream {
-    let id_ident = &table.id.field;
+    let id_ident = &table.id.as_ref().unwrap().field;
     let insert_field_idents = table
         .insertable_fields()
         .map(|f| &f.field)
@@ -70,7 +83,7 @@ fn construct_row(table: &Table<MySqlBackend>) -> TokenStream {
 fn query_default(table: &Table<MySqlBackend>) -> TokenStream {
     let mut default_fields = table
         .default_fields()
-        .filter(|f| f.field != table.id.field)
+        .filter(|f| f.field != table.id.as_ref().unwrap().field)
         .peekable();
 
     if default_fields.peek().is_none() {
@@ -81,18 +94,19 @@ fn query_default(table: &Table<MySqlBackend>) -> TokenStream {
         "SELECT {} FROM {} WHERE {} = ?",
         default_fields.map(TableField::fmt_for_select).join(", "),
         table.table,
-        table.id.column()
+        table.id.as_ref().unwrap().column()
     );
 
     quote! {
         let _generated = sqlx::query!(#query_default_sql, _id)
-            .fetch_one(&mut *conn)
+            .fetch_one(db)
             .await?;
     }
 }
 
+
 /// inserts the struct into the database
-fn insert(table: &Table<MySqlBackend>) -> TokenStream {
+fn insert_with(table: &Table<MySqlBackend>) -> TokenStream {
     let insert_fields: Vec<_> = table.insertable_fields().collect();
     let insert_field_idents = insert_fields.iter().map(|field| &field.field);
 
@@ -105,7 +119,7 @@ fn insert(table: &Table<MySqlBackend>) -> TokenStream {
 
     quote! {
         sqlx::query!(#insert_sql, #( self.#insert_field_idents, )*)
-            .execute(&mut *conn)
+            .execute(db as &mut sqlx::MySqlConnection)
             .await?;
     }
 }
@@ -117,15 +131,15 @@ fn insert(table: &Table<MySqlBackend>) -> TokenStream {
 /// case 2:
 ///     The ID is already known, so we can just use it.
 fn query_id(table: &Table<MySqlBackend>) -> TokenStream {
-    match table.id.default {
+    match table.id.as_ref().unwrap().default {
         true => quote! {
             let _id = sqlx::query!("SELECT LAST_INSERT_ID() AS id")
-                .fetch_one(&mut *conn)
+                .fetch_one(db as &mut sqlx::MySqlConnection)
                 .await?
                 .id;
         },
         false => {
-            let id_ident = &table.id.field;
+            let id_ident = &table.id.as_ref().unwrap().field;
             quote!(let _id = self.#id_ident;)
         }
     }

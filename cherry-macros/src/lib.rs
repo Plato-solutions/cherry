@@ -1,9 +1,12 @@
 #![cfg(any(feature = "mysql", feature = "postgres", feature = "sqlite"))]
 
+use proc_macro2::TokenStream;
+
 mod attrs;
 mod backend;
 mod patch;
 mod table;
+mod schema;
 mod utils;
 
 
@@ -91,11 +94,17 @@ mod utils;
 #[proc_macro_derive(Table, attributes(cherry))]
 pub fn derive_table(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    match table::derive(input) {
-        Ok(ok) => ok,
+
+    match schema::derive(&input) {
+        Ok(mut schema_impl) => match table::derive(&input) {
+            Ok(table_impl) => {
+                schema_impl.extend(table_impl);
+                schema_impl
+            } ,
+            Err(err) => err.to_compile_error(),
+        }
         Err(err) => err.to_compile_error(),
-    }
-    .into()
+    }.into()
 }
 
 /// Derives [Patch](trait.Patch.html).

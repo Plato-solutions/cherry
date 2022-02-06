@@ -4,6 +4,7 @@ use proc_macro2::TokenStream;
 
 use crate::patch::Patch;
 use crate::table::Table;
+use crate::schema::Schema;
 
 mod common;
 #[cfg(feature = "mysql")]
@@ -38,6 +39,11 @@ pub trait Backend: Sized + Clone {
     /// Generate an `impl Table for <Table>` block
     fn impl_table(table: &Table<Self>) -> TokenStream {
         common::impl_table::<Self>(table)
+    }
+
+    /// Generate an `impl Table for <Table>` block
+    fn impl_schema(table: &Schema<Self>) -> TokenStream {
+        common::impl_schema::<Self>(table)
     }
 
     /// Generate an `impl cherry::Schema for <Query>` block

@@ -83,12 +83,11 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Table<B> {
             .map(TableField::try_from)
             .collect::<Result<Vec<_>>>()?;
 
-        none!(table, id, datasource, insertable, queryable);
+        none!(table, id, insertable);
         for attr in parse_attrs::<TableAttr>(&value.attrs)? {
             match attr {
                 TableAttr::Table(x) => set_once(&mut table, x)?,
                 TableAttr::Id(x) => set_once(&mut id, x)?,
-                TableAttr::Datasource(x) => set_once(&mut datasource, x)?,
                 TableAttr::Insertable(x) => {
                     let default = || Insertable {
                         attrs: vec![],
@@ -96,30 +95,25 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Table<B> {
                     };
                     set_once(&mut insertable, x.unwrap_or_else(default))?;
                 },
-                TableAttr::Queryable(x) => {
-                    let default = || Queryable {
-                        attrs: vec![],
-                        ident: Ident::new(&format!("Query{}", value.ident), Span::call_site()),
-                    };
-                    set_once(&mut queryable, x.unwrap_or_else(default))?;
-                }
+                _ => {}
             }
         }
 
-        let id = id.ok_or_else(|| missing_attr("id"))?;
-        let id = fields
-            .iter()
-            .find(|field| field.field == id)
-            .ok_or_else(|| {
-                Error::new(
-                    Span::call_site(),
-                    "id does not refer to a field of the struct",
-                )
-            })?
-            .clone();
 
-        let datasource = datasource.ok_or_else(|| missing_attr("datasource"))?;
-
+        let id = if let Some(i) = id {
+            Some(fields
+                .iter()
+                .find(|field| field.field == i)
+                .ok_or_else(|| {
+                    Error::new(
+                        Span::call_site(),
+                        "id does not refer to a field of the struct",
+                    )
+                })?
+                .clone())
+        } else {
+            None
+        };
 
         if insertable.is_none() && fields.iter().any(|field| field.default) {
             return Err(Error::new(
@@ -136,9 +130,7 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Table<B> {
             table: table.ok_or_else(|| missing_attr("table"))?,
             id,
             insertable,
-            queryable,
             fields,
-            datasource,
         })
     }
 }

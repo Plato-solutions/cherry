@@ -5,6 +5,7 @@ use quote::quote;
 use syn::{Ident, Type, Visibility};
 
 pub use table::*;
+pub use schema::*;
 
 use crate::attrs::{Insertable};
 use crate::backend::Backend;
@@ -12,10 +13,12 @@ use crate::patch::Patch;
 use crate::table::Table;
 
 mod table;
-
-pub mod schema;
+mod schema;
 
 pub(crate) fn getters<B: Backend>(table: &Table<B>) -> TokenStream {
+    if table.id.is_none() {
+        return quote!{}
+    }
     let column_list = table.select_column_list();
     let vis = &table.vis;
     let mut getters = TokenStream::new();
@@ -90,6 +93,9 @@ pub fn get_many(vis: &Visibility, ident: &Ident, by_ty: &Type, sql: &str) -> Tok
 }
 
 pub fn setters<B: Backend>(table: &Table<B>) -> TokenStream {
+    if table.id.is_none() {
+        return quote!{}
+    }
     let vis = &table.vis;
     let mut setters = TokenStream::new();
 
@@ -104,7 +110,7 @@ pub fn setters<B: Backend>(table: &Table<B>) -> TokenStream {
                 table.table,
                 field.column(),
                 bindings.next().unwrap(),
-                table.id.column(),
+                table.id.as_ref().unwrap().column(),
                 bindings.next().unwrap(),
             );
             setters.extend(quote! {
@@ -176,7 +182,15 @@ pub(crate) fn impl_patch<B: Backend>(patch: &Patch) -> TokenStream {
                 #( entity.#field_idents = self.#field_idents; )*
             }
 
-            fn patch_row<'a, 'c: 'a>(
+            fn patch_row<'a>(
+                &'a self,
+                id: <Self::Table as cherry::Table>::Id,
+            ) -> #box_future<'a, sqlx::Result<()>> {
+                let db = Table::pool()?;
+                Ok(self.patch_row_with(db,id)?)
+            }
+
+            fn patch_row_with<'a, 'c: 'a>(
                 &'a self,
                 db: impl sqlx::Executor<'c, Database = cherry::Db> + 'a,
                 id: <Self::Table as cherry::Table>::Id,

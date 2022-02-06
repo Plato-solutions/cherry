@@ -4,11 +4,13 @@ use quote::quote;
 
 use crate::{
     backend::Backend,
-    table::{Table},
+    schema::{Schema},
 };
 
-pub fn impl_schema<B: Backend>(table: &Table<B>) -> TokenStream {
+pub fn impl_schema<B: Backend>(table: &Schema<B>) -> TokenStream {
     let table_ident = &table.ident;
+    let datasource = &table.datasource;
+
     let name = name::<B>(table);
     let columns = columns::<B>(table);
     let arguments = arguments::<B>(table);
@@ -16,6 +18,8 @@ pub fn impl_schema<B: Backend>(table: &Table<B>) -> TokenStream {
 
     quote! {
         impl cherry::Schema for #table_ident {
+            fn datasource() -> std::any::TypeId { std::any::TypeId::of::<#datasource>() }
+
             #name
             #columns
             #arguments
@@ -25,7 +29,7 @@ pub fn impl_schema<B: Backend>(table: &Table<B>) -> TokenStream {
 }
 
 
-fn name<B: Backend>(table: &Table<B>) -> TokenStream {
+fn name<B: Backend>(table: &Schema<B>) -> TokenStream {
     let table_name = &table.table;
 
     quote! {
@@ -35,7 +39,7 @@ fn name<B: Backend>(table: &Table<B>) -> TokenStream {
     }
 }
 
-fn columns<B: Backend>(table: &Table<B>) -> TokenStream {
+fn columns<B: Backend>(table: &Schema<B>) -> TokenStream {
     let fields : proc_macro2::TokenStream = table.fields
         .iter()
         .map(|s|
@@ -49,7 +53,7 @@ fn columns<B: Backend>(table: &Table<B>) -> TokenStream {
     }
 }
 
-fn arguments<B: Backend>(table: &Table<B>) -> TokenStream {
+fn arguments<B: Backend>(table: &Schema<B>) -> TokenStream {
     let arguments : proc_macro2::TokenStream = table.fields
         .iter().map(|s|
         format!(" arguments.add(&self.{}); ", s.field)
@@ -63,7 +67,7 @@ fn arguments<B: Backend>(table: &Table<B>) -> TokenStream {
     }
 }
 
-fn from_row<B: Backend>(table: &Table<B>) -> TokenStream {
+fn from_row<B: Backend>(table: &Schema<B>) -> TokenStream {
     let from_row : proc_macro2::TokenStream = table.fields
         .iter()
         .map(|field|
@@ -77,3 +81,22 @@ fn from_row<B: Backend>(table: &Table<B>) -> TokenStream {
         }
     }
 }
+
+
+// fn transaction() -> TokenStream {
+//     quote! {
+//         fn transaction(
+//         ) -> Transaction {
+//             Self::pool()?.begin().await?
+//         }
+//     } //    fn select<'a, T>(&'static self) -> Select<'a, T> where T: Schema + 'static {
+// }
+//
+// fn select() -> TokenStream {
+//     quote! {
+//         fn select(
+//         ) -> Select {
+//             Self::datasource().select();
+//         }
+//     }
+// }
