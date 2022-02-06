@@ -60,7 +60,7 @@ pub fn impl_insert(table: &Table<MySqlBackend>) -> TokenStream {
 /// - `_generated` (see `query_default` below)
 /// - all fields already present in the insert struct
 fn construct_row(table: &Table<MySqlBackend>) -> TokenStream {
-    let id_ident = &table.id.as_ref().unwrap().field;
+    let id_ident = &table.id.field;
     let insert_field_idents = table
         .insertable_fields()
         .map(|f| &f.field)
@@ -83,7 +83,7 @@ fn construct_row(table: &Table<MySqlBackend>) -> TokenStream {
 fn query_default(table: &Table<MySqlBackend>) -> TokenStream {
     let mut default_fields = table
         .default_fields()
-        .filter(|f| f.field != table.id.as_ref().unwrap().field)
+        .filter(|f| f.field != table.id.field)
         .peekable();
 
     if default_fields.peek().is_none() {
@@ -94,7 +94,7 @@ fn query_default(table: &Table<MySqlBackend>) -> TokenStream {
         "SELECT {} FROM {} WHERE {} = ?",
         default_fields.map(TableField::fmt_for_select).join(", "),
         table.table,
-        table.id.as_ref().unwrap().column()
+        table.id.column()
     );
 
     quote! {
@@ -131,7 +131,7 @@ fn insert_with(table: &Table<MySqlBackend>) -> TokenStream {
 /// case 2:
 ///     The ID is already known, so we can just use it.
 fn query_id(table: &Table<MySqlBackend>) -> TokenStream {
-    match table.id.as_ref().unwrap().default {
+    match table.id.default {
         true => quote! {
             let _id = sqlx::query!("SELECT LAST_INSERT_ID() AS id")
                 .fetch_one(db as &mut sqlx::MySqlConnection)
@@ -139,7 +139,7 @@ fn query_id(table: &Table<MySqlBackend>) -> TokenStream {
                 .id;
         },
         false => {
-            let id_ident = &table.id.as_ref().unwrap().field;
+            let id_ident = &table.id.field;
             quote!(let _id = self.#id_ident;)
         }
     }

@@ -16,9 +16,6 @@ mod table;
 mod schema;
 
 pub(crate) fn getters<B: Backend>(table: &Table<B>) -> TokenStream {
-    if table.id.is_none() {
-        return quote!{}
-    }
     let column_list = table.select_column_list();
     let vis = &table.vis;
     let mut getters = TokenStream::new();
@@ -93,9 +90,6 @@ pub fn get_many(vis: &Visibility, ident: &Ident, by_ty: &Type, sql: &str) -> Tok
 }
 
 pub fn setters<B: Backend>(table: &Table<B>) -> TokenStream {
-    if table.id.is_none() {
-        return quote!{}
-    }
     let vis = &table.vis;
     let mut setters = TokenStream::new();
 
@@ -110,7 +104,7 @@ pub fn setters<B: Backend>(table: &Table<B>) -> TokenStream {
                 table.table,
                 field.column(),
                 bindings.next().unwrap(),
-                table.id.as_ref().unwrap().column(),
+                table.id.column(),
                 bindings.next().unwrap(),
             );
             setters.extend(quote! {

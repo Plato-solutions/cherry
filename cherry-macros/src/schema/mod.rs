@@ -25,16 +25,11 @@ pub struct Schema<B: Backend> {
 
 pub fn derive(input: &DeriveInput) -> Result<TokenStream> {
     let parsed = Schema::try_from(input)?;
-    if let Some(ref id) = parsed.queryable  {
-        let impl_schema = Implementation::impl_schema(&parsed);
+    let impl_schema = Implementation::impl_schema(&parsed);
 
-        Ok(quote! {
-            #impl_schema
-        })
-    } else {
-        Ok(quote!{})
-    }
-
+    Ok(quote! {
+        #impl_schema
+    })
 }
 
 

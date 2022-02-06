@@ -6,8 +6,8 @@ use crate::table::Table;
 
 pub fn impl_table<B: Backend>(table: &Table<B>) -> TokenStream {
     let table_ident = &table.ident;
-    let id_ident = &table.id.as_ref().unwrap().field;
-    let id_ty = &table.id.as_ref().unwrap().ty;
+    let id_ident = &table.id.field;
+    let id_ty = &table.id.ty;
     let column_list = table.select_column_list();
 
     let get = get::<B>(table, &column_list);
@@ -37,7 +37,7 @@ fn get<B: Backend>(table: &Table<B>, column_list: &str) -> TokenStream {
         "SELECT {} FROM {} WHERE {} = {}",
         column_list,
         table.table,
-        table.id.as_ref().unwrap().column(),
+        table.id.column(),
         B::Bindings::default().next().unwrap()
     );
 
@@ -68,10 +68,10 @@ fn update<B: Backend>(table: &Table<B>) -> TokenStream {
         "UPDATE {} SET {} WHERE {} = {}",
         table.table,
         assignments,
-        table.id.as_ref().unwrap().column(),
+        table.id.column(),
         bindings.next().unwrap()
     );
-    let id_argument = &table.id.as_ref().unwrap().field;
+    let id_argument = &table.id.field;
     let other_arguments = table.fields_except_id().map(|field| {
         let ident = &field.field;
         let mut out = quote!(self.#ident);
@@ -149,11 +149,11 @@ fn stream_all_paginated<B: Backend>(table: &Table<B>, column_list: &str) -> Toke
 
 fn delete<B: Backend>(table: &Table<B>) -> TokenStream {
     let box_future = crate::utils::box_future();
-    let id_ty = &table.id.as_ref().unwrap().ty;
+    let id_ty = &table.id.ty;
     let delete_sql = format!(
         "DELETE FROM {} WHERE {} = {}",
         table.table,
-        table.id.as_ref().unwrap().column(),
+        table.id.column(),
         B::Bindings::default().next().unwrap()
     );
     #[cfg(feature = "mysql")]

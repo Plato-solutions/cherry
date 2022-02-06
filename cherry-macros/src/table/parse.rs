@@ -99,21 +99,18 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Table<B> {
             }
         }
 
-
-        let id = if let Some(i) = id {
-            Some(fields
+        let id = id.ok_or_else(|| missing_attr("id"))?;
+        let id = fields
                 .iter()
-                .find(|field| field.field == i)
+            .find(|field| field.field == id)
                 .ok_or_else(|| {
                     Error::new(
                         Span::call_site(),
                         "id does not refer to a field of the struct",
                     )
                 })?
-                .clone())
-        } else {
-            None
-        };
+            .clone();
+
 
         if insertable.is_none() && fields.iter().any(|field| field.default) {
             return Err(Error::new(
