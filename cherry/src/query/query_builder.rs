@@ -31,6 +31,11 @@ impl<'a> QueryBuilder<'a> {
 
 impl<'a> QueryBuilder<'a>{
 
+    pub (crate) fn group_by<S: ToString>(&mut self, f: S) -> &mut Self {
+        self.sql_builder.group_by(f);
+        self
+    }
+
     pub(crate) fn and_where_eq<S, V>(&mut self, f: S, v: V) -> &mut Self
         where
             S: ToString,
@@ -117,7 +122,6 @@ impl<'a> QueryBuilder<'a>{
             V: ToString,
     {
         self.sql_builder.and_where_not_like(f, v);
-        // self.arguments.add(v);
         self
     }
 
@@ -250,6 +254,15 @@ impl<'a> QueryBuilder<'a>{
     {
         self.sql_builder.or_where_lt(f, '?');
         self.arguments.add(v);
+        self
+    }
+
+    pub(crate) fn or_where_like<S, V>(&mut self, f: S, v: V) -> &mut Self
+        where
+            S: ToString,
+            V: ToString,
+    {
+        self.sql_builder.or_where_like(f, v);
         self
     }
 

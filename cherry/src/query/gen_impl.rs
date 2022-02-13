@@ -27,6 +27,12 @@ macro_rules! gen_execute {
 #[macro_export]
 macro_rules! gen_where {
     () => {
+
+        pub fn group_by<S: ToString>(mut self, f: S) -> Self {
+            self.query.group_by(f);
+            self
+        }
+
         pub fn and_where_eq<S, V>(mut self, f: S, v: V) -> Self
             where
                 S: ToString,
@@ -216,6 +222,15 @@ macro_rules! gen_where {
                 V: Encode<'a, Database> + Type<Database> + Send + 'a
         {
             self.query.or_where_lt(f, v);
+            self
+        }
+
+        pub fn or_where_like<S, V>(mut self, f: S, v: V) -> Self
+            where
+                S: ToString,
+                V: ToString,
+        {
+            self.query.or_where_like(f, v);
             self
         }
 
