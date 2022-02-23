@@ -35,6 +35,17 @@ pub(crate) fn get(type_id: TypeId) -> Result<&'static Pool> {
     Ok(value)
 }
 
+pub async fn close(type_id: TypeId) -> Result<bool> {
+    let mut value = POOLS.get()
+        .ok_or_else(|| anyhow!("Pools is empty."))?
+        .get(&type_id)
+        .ok_or_else(|| anyhow!("No pool found for key: {:?}", type_id))?;
+
+    value.close().await;
+
+    Ok(value.is_closed())
+}
+
 
 #[cfg_attr(feature = "json", derive(serde::Deserialize))]
 #[derive(Debug, Default, Clone)]
