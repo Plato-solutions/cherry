@@ -13,17 +13,23 @@ static POOLS: OnceCell<BTreeMap<TypeId, Pool>> = OnceCell::new();
 pub async fn setup_pools<T>(config: T) -> Result<()>
     where T: IntoIterator<Item = (TypeId, PoolConfig)>
 {
-    if POOLS.get().is_none()
-    {
-        let mut pools = BTreeMap::new();
-        for (key, v) in config {
-            pools.insert(key, v.to_pool().await?);
-        }
+    let mut pools = if let Some( pools) = POOLS.get_mut() {
+        pools
+    } else {  
+        BTreeMap::new(); 
+    };
 
-        POOLS.set(pools).map_err(|_| anyhow!("Failed to set pools."))?;
-    } else {
-        anyhow!("Failed to set pools.");
+    for (key, v) in config {
+        if get(key).is_err()
+        {
+            pools.insert(key, v.to_pool().await?);
+        } else {
+            anyhow!("Failed to set a pool.");
+        }
     }
+
+    POOLS.set(pools).map_err(|_| anyhow!("Failed to set pools."))?;
+    
     Ok(())
 }
 
@@ -36,7 +42,7 @@ pub(crate) fn get(type_id: TypeId) -> Result<&'static Pool> {
 }
 
 pub async fn close(type_id: TypeId) -> Result<bool> {
-    let mut value = POOLS.get()
+    let mut value = POOLS.get_mut()
         .ok_or_else(|| anyhow!("Pools is empty."))?
         .get(&type_id)
         .ok_or_else(|| anyhow!("No pool found for key: {:?}", type_id))?;
