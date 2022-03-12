@@ -32,7 +32,7 @@ pub enum TableFieldAttr {
     CustomType(()),
     // default
     Default(()),
-    // unmapped
+    // unmapped, type must be Option
     Unmapped(()),
     // get_one [= <ident>]? [(<type>)]?
     GetOne(Getter),

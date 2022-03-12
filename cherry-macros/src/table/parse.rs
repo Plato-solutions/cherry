@@ -15,6 +15,8 @@ macro_rules! none {
     ($($i:ident),*) => { $( let mut $i = None; )* };
 }
 
+use syn::{GenericArgument, PathArguments, Type};
+
 impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
     type Error = Error;
 
@@ -52,7 +54,27 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
                     set_once(&mut set, s.unwrap_or_else(default))?
                 }
                 TableFieldAttr::Default(..) => set_once(&mut default, true)?,
-                TableFieldAttr::Unmapped(..) => set_once(&mut unmapped, true)?,
+                TableFieldAttr::Unmapped(..) => {
+                    let is_option = match &value.ty {
+                        Type::Path(typepath) => {
+                            if typepath.path.leading_colon.is_none()
+                                && typepath.path.segments.len() == 1
+                                && typepath.path.segments.iter().next().unwrap().ident == "Option"
+                            {
+                                set_once(&mut unmapped, true)?;
+                                true
+                            }
+                            else { false }
+                        }
+                        _ => { false }
+                    };
+                    if !is_option {
+                        return Err(Error::new(
+                            Span::call_site(),
+                            "#[cherry(unmapped)] fields must be of type Option",
+                        ));
+                    }
+                },
             }
         }
 
