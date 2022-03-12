@@ -1,6 +1,4 @@
 #![cfg(any(feature = "mysql", feature = "postgres", feature = "sqlite"))]
-#![feature(trace_macros)]
-trace_macros!(true);
 
 use proc_macro2::TokenStream;
 
