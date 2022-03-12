@@ -23,11 +23,13 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Schema<B> {
             _ => panic!("not a struct with named fields"),
         };
 
-        let fields = data
+        let mut fields = data
             .fields
             .iter()
             .map(TableField::try_from)
             .collect::<Result<Vec<_>>>()?;
+
+        // fields.retain(|field| !field.unmapped);
 
         none!(table, datasource, queryable);
         for attr in parse_attrs::<TableAttr>(&value.attrs)? {

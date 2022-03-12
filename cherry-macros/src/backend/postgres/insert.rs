@@ -35,6 +35,8 @@ pub fn impl_insert(table: &Table<PgBackend>) -> TokenStream {
 
     let insert_fields: Vec<&TableField<PgBackend>> = table.insertable_fields().collect();
     let default_fields: Vec<&TableField<PgBackend>> = table.default_fields().collect();
+    let unmapped_fields: Vec<&TableField<PgBackend>> = table.unmapped_fields().collect();
+
 
     let table_ident = &table.ident;
     let insert_field_idents = insert_fields
@@ -42,6 +44,10 @@ pub fn impl_insert(table: &Table<PgBackend>) -> TokenStream {
         .map(|field| &field.field)
         .collect::<Vec<&Ident>>();
     let default_field_idents = default_fields
+        .iter()
+        .map(|field| &field.field)
+        .collect::<Vec<&Ident>>();
+    let unmapped_field_idents = unmapped_fields
         .iter()
         .map(|field| &field.field)
         .collect::<Vec<&Ident>>();
@@ -85,6 +91,7 @@ pub fn impl_insert(table: &Table<PgBackend>) -> TokenStream {
                     Ok(Self::Table {
                         #( #insert_field_idents: self.#insert_field_idents, )*
                         #( #default_field_idents: _generated.#default_field_idents, )*
+                        #( #unmapped_field_idents: Default::default(), )*
                     })
                 })
             }

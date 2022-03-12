@@ -9,6 +9,7 @@ use crate::utils::{missing_attr, set_once};
 use super::{Table, TableField};
 use crate::backend::Backend;
 use std::marker::PhantomData;
+use itertools::Itertools;
 
 macro_rules! none {
     ($($i:ident),*) => { $( let mut $i = None; )* };
@@ -35,7 +36,8 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
             get_optional,
             get_many,
             set,
-            default
+            default,
+            unmapped
         );
 
         for attr in parse_attrs::<TableFieldAttr>(&value.attrs)? {
@@ -50,13 +52,16 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
                     set_once(&mut set, s.unwrap_or_else(default))?
                 }
                 TableFieldAttr::Default(..) => set_once(&mut default, true)?,
+                TableFieldAttr::Unmapped(..) => set_once(&mut unmapped, true)?,
             }
         }
+
         Ok(TableField {
             column_name: column.unwrap_or_else(|| ident.to_string()),
             field: ident,
             ty: value.ty.clone(),
             custom_type: custom_type.unwrap_or(false),
+            unmapped: unmapped.unwrap_or(false),
             reserved_ident,
             default: default.unwrap_or(false),
             get_one,

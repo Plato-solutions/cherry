@@ -42,6 +42,7 @@ fn get<B: Backend>(table: &Table<B>, column_list: &str) -> TokenStream {
     );
 
     quote! {
+
         fn get<'a>(
             id: Self::Id,
         ) -> #box_future<'a, sqlx::Result<Self>> {

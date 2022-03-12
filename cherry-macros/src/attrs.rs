@@ -32,6 +32,8 @@ pub enum TableFieldAttr {
     CustomType(()),
     // default
     Default(()),
+    // unmapped
+    Unmapped(()),
     // get_one [= <ident>]? [(<type>)]?
     GetOne(Getter),
     // get_optional [= <ident>]? [(<type>)]?
@@ -164,7 +166,8 @@ impl_parse!(TableFieldAttr {
     "get_many" => GetMany(Getter),
     "set" => Set((= Ident)?),
     "custom_type" => CustomType(),
-    "default" => Default()
+    "default" => Default(),
+    "unmapped" => Unmapped()
 });
 
 impl_parse!(PatchAttr {

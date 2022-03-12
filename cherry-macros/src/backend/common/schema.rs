@@ -40,8 +40,7 @@ fn name<B: Backend>(table: &Schema<B>) -> TokenStream {
 }
 
 fn columns<B: Backend>(table: &Schema<B>) -> TokenStream {
-    let fields : proc_macro2::TokenStream = table.fields
-        .iter()
+    let fields : proc_macro2::TokenStream = table.mapped_fields()
         .map(|s|
             format!(" \"{}\"", s.column())
         ).join(", ").parse().unwrap();
@@ -54,10 +53,10 @@ fn columns<B: Backend>(table: &Schema<B>) -> TokenStream {
 }
 
 fn arguments<B: Backend>(table: &Schema<B>) -> TokenStream {
-    let arguments : proc_macro2::TokenStream = table.fields
-        .iter().map(|s|
-        format!(" arguments.add(&self.{}); ", s.field)
-    ).collect::<String>().parse().unwrap();
+    let arguments : proc_macro2::TokenStream = table.mapped_fields()
+        .map(|s|
+            format!(" arguments.add(&self.{}); ", s.field)
+        ).collect::<String>().parse().unwrap();
 
     quote! {
         fn arguments<'a>(&'a self, arguments: &mut cherry::types::Arguments<'a>) {
@@ -68,19 +67,44 @@ fn arguments<B: Backend>(table: &Schema<B>) -> TokenStream {
 }
 
 fn from_row<B: Backend>(table: &Schema<B>) -> TokenStream {
-    let from_row : proc_macro2::TokenStream = table.fields
-        .iter()
+    let from_row : proc_macro2::TokenStream = table.mapped_fields()
         .map(|field|
             format!(" {0}: row.try_get(\"{1}\")?", field.field, field.column())
         ).join(", ").parse().unwrap();
 
+    let defaults : proc_macro2::TokenStream = table.unmapped_fields()
+        .map(|field|
+            format!(" {0}: Default::default()", field.field)
+        ).join(", ").parse().unwrap();
+
+    //@TODO add unmapped fields
     quote! {
         fn from_row(row: &cherry::types::Row) -> Result<Self, cherry::error::Error> {
             use cherry::sqlx::Row as OtherRow;
-            Ok( Self { #from_row } )
+            Ok( Self { #from_row,
+            #defaults} )
         }
     }
 }
+
+// fn get<B: Backend>(table: &Table<B>, column_list: &str) -> TokenStream {
+//     let box_future = crate::utils::box_future();
+//     let select = format!("{}",table.id.column());
+//
+//     quote! {
+//             fn get<'a>(
+//                 id: Self::Id,
+//             ) -> #box_future<'a, Result<Self>> {
+//                 Box::pin(async move {
+//                     Self::select()
+//                         .and_where_eq(#select, id)
+//                         .fetch()
+//                         .await?
+//                         .ok_or()
+//                 })
+//             }
+//         }
+// }
 
 
 // fn transaction() -> TokenStream {

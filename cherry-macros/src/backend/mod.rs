@@ -48,7 +48,7 @@ pub trait Backend: Sized + Clone {
 
     /// Generate an `impl cherry::Schema for <Query>` block
     #[cfg(feature = "query")]
-    fn impl_schema(table: &Table<Self>) -> TokenStream {
+    fn impl_schema(table: &Table<Self>) -> TokenStream { //@TODO this has probably settled enough to make query derived
         common::schema::impl_schema::<Self>(table)
     }
 

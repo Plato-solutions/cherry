@@ -28,6 +28,7 @@ pub struct TableField<B: Backend> {
     pub ty: Type,
     pub column_name: String,
     pub custom_type: bool,
+    pub unmapped: bool,
     pub reserved_ident: bool,
     pub default: bool,
     pub get_one: Option<Getter>,
@@ -40,22 +41,39 @@ pub struct TableField<B: Backend> {
 impl<B: Backend> Table<B> {
     pub fn fields_except_id(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
         let id = self.id.field.clone();
-        self.fields.iter().filter(move |field| field.field != id)
+        self.mapped_fields().filter(move |field| field.field != id)
     }
 
     pub fn insertable_fields(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
-        self.fields.iter().filter(|field| !field.default)
+        self.mapped_fields().filter(|field| !field.default)
     }
 
     pub fn default_fields(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
         self.fields.iter().filter(|field| field.default)
     }
 
+    pub fn mapped_fields(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
+        self.fields.iter().filter(|field| !field.unmapped)
+    }
+
+    pub fn unmapped_fields(&self) -> impl Iterator<Item = &TableField<B>> + Clone {
+        self.fields.iter().filter(|field| field.unmapped)
+    }
+
     pub fn select_column_list(&self) -> String {
-        self.fields
-            .iter()
+        let result_fields = self.mapped_fields()
             .map(|field| field.fmt_for_select())
-            .join(", ")
+            .join(", ");
+
+        let default_fields = self.unmapped_fields()
+            .map(|field| format!("NULL as {}{}: _{}",B::QUOTE,field.fmt_for_select(),B::QUOTE))
+            .join(", ");
+
+        if default_fields.is_empty() {
+            result_fields
+        } else {
+            format!("{}, {}",result_fields, default_fields)
+        }
     }
 }
 

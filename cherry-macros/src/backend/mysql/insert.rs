@@ -69,12 +69,18 @@ fn construct_row(table: &Table<MySqlBackend>) -> TokenStream {
         .default_fields()
         .map(|f| &f.field)
         .filter(|f| *f != id_ident);
+    let unmapped_field_idents = table
+        .unmapped_fields()
+        .map(|f| &f.field)
+        .filter(|f| *f != id_ident);
+
 
     quote! {
         Self::Table {
             #id_ident: _id as _,
             #( #insert_field_idents: self.#insert_field_idents, )*
             #( #default_field_idents: _generated.#default_field_idents, )*
+            #( #unmapped_field_idents: Default::default(), )*
         }
     }
 }
