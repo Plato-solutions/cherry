@@ -1,6 +1,6 @@
 [package]
 name = "cherry-macros"
-version = "0.7.1"
+version = "0.7.2"
 authors = ["moritz"]
 edition = "2018"
 description = "lightweight procedural macros bringing orm-like features to sqlx"
