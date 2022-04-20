@@ -35,6 +35,7 @@ pub struct TableField<B: Backend> {
     pub get_optional: Option<Getter>,
     pub get_many: Option<Getter>,
     pub set: Option<Ident>,
+    pub other_attrs: TokenStream,
     pub _phantom: PhantomData<*const B>,
 }
 

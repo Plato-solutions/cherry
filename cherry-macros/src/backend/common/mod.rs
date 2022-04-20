@@ -1,7 +1,7 @@
 //! Common functionality used for all database backends
 
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{Ident, Type, Visibility};
 
 pub use table::*;
@@ -208,8 +208,9 @@ pub(crate) fn insert_struct<B: Backend>(table: &Table<B>) -> TokenStream {
     let vis = &table.vis;
     let insert_fields = table.insertable_fields().map(|field| {
         let ident = &field.field;
+        let other = &field.other_attrs;
         let ty = &field.ty;
-        quote!(#vis #ident: #ty)
+        quote!( #other #vis #ident: #ty )
     });
 
     let from_impl = impl_from_for_insert_struct(table, ident);

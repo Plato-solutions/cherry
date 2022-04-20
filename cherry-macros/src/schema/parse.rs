@@ -32,7 +32,8 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Schema<B> {
         // fields.retain(|field| !field.unmapped);
 
         none!(table, datasource, queryable);
-        for attr in parse_attrs::<TableAttr>(&value.attrs)? {
+        let (attrs, other_attrs) = parse_attrs::<TableAttr>(&value.attrs)?;
+        for attr in attrs {
             match attr {
                 TableAttr::Table(x) => set_once(&mut table, x)?,
                 TableAttr::Datasource(x) => set_once(&mut datasource, x)?,

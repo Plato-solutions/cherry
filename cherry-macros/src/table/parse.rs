@@ -42,7 +42,8 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
             unmapped
         );
 
-        for attr in parse_attrs::<TableFieldAttr>(&value.attrs)? {
+        let (attrs,other_attrs) =parse_attrs::<TableFieldAttr>(&value.attrs)?;
+        for attr in attrs {
             match attr {
                 TableFieldAttr::Column(c) => set_once(&mut column, c)?,
                 TableFieldAttr::CustomType(..) => set_once(&mut custom_type, true)?,
@@ -90,6 +91,7 @@ impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
             get_optional,
             get_many,
             set,
+            other_attrs,
             _phantom: PhantomData,
         })
     }
@@ -111,7 +113,8 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Table<B> {
             .collect::<Result<Vec<_>>>()?;
 
         none!(table, id, insertable);
-        for attr in parse_attrs::<TableAttr>(&value.attrs)? {
+        let (attrs, other_attrs) = parse_attrs::<TableAttr>(&value.attrs)?;
+        for attr in attrs {
             match attr {
                 TableAttr::Table(x) => set_once(&mut table, x)?,
                 TableAttr::Id(x) => set_once(&mut id, x)?,

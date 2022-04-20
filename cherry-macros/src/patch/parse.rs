@@ -26,7 +26,8 @@ impl TryFrom<&syn::DeriveInput> for Patch {
         let mut table = None;
         let mut table_name = None;
         let mut id = None;
-        for attr in parse_attrs::<PatchAttr>(&value.attrs)? {
+        let (attrs,other_attrs) = parse_attrs::<PatchAttr>(&value.attrs)?;
+        for attr in attrs {
             match attr {
                 PatchAttr::Table(x) => set_once(&mut table, x)?,
                 PatchAttr::TableName(x) => set_once(&mut table_name, x)?,
@@ -52,7 +53,8 @@ impl TryFrom<&syn::Field> for PatchField {
 
         let mut column = None;
         let mut custom_type = None;
-        for attr in parse_attrs::<PatchFieldAttr>(&value.attrs)? {
+        let (attrs,other_attrs) = parse_attrs::<PatchFieldAttr>(&value.attrs)?;
+        for attr in attrs {
             match attr {
                 PatchFieldAttr::Column(x) => set_once(&mut column, x)?,
                 PatchFieldAttr::CustomType(_) => set_once(&mut custom_type, true)?,

@@ -1,6 +1,8 @@
+use proc_macro2::TokenStream;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Attribute, Ident, Path, Result, Token, Type};
+use quote::ToTokens;
 
 pub enum TableAttr {
     // table = <string>
@@ -100,7 +102,15 @@ impl Parse for Queryable {
     }
 }
 
-pub fn parse_attrs<A: Parse>(attrs: &[Attribute]) -> Result<Vec<A>> {
+pub fn parse_attrs<A: Parse>(attrs: &[Attribute]) -> Result<(Vec<A>,TokenStream)> {
+
+    let mut attrs_other = TokenStream::new();
+
+    attrs.clone().iter()
+        .filter(|a| !a.path.is_ident("cherry"))
+        .for_each(|a| Attribute::to_tokens(a,&mut attrs_other));
+
+
     let attrs = attrs
         .iter()
         .filter(|a| a.path.is_ident("cherry"))
@@ -109,7 +119,8 @@ pub fn parse_attrs<A: Parse>(attrs: &[Attribute]) -> Result<Vec<A>> {
         .into_iter()
         .flatten()
         .collect();
-    Ok(attrs)
+
+    Ok((attrs,attrs_other))
 }
 
 /// implements `syn::parse::Parse` for the given type
