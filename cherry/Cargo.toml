@@ -67,7 +67,6 @@ version = "0.8.2"
 path = "../../cherry/cherry-macros"
 
 [dev-dependencies]
-self = { version = "0.8.2", features = ["default", "test"] }
 tokio = { version = "1.1", features = ["full"] }
 anyhow = "1"
 

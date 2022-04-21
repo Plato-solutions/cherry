@@ -25,7 +25,6 @@ pub async fn setup_pools<T>(config: T) -> Result<()>
         if cfg!(any(test, feature = "test")) {
             return Ok(());
         } else {
-            println!("cherry feature test not enabled");
             Err(anyhow!("Failed to set pools."))?;
         }
     }
