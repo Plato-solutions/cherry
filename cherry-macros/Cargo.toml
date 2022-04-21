@@ -1,8 +1,8 @@
 [package]
 name = "cherry-macros"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["moritz"]
-edition = "2018"
+edition = "2021"
 description = "lightweight procedural macros bringing orm-like features to sqlx"
 homepage = "https://github.com/NyxCode/cherry"
 license = "MIT"

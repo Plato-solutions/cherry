@@ -5,13 +5,12 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{DeriveInput, Result, Type, Visibility};
 
-use crate::attrs::{Getter, Insertable, Queryable};
+use crate::attrs::{Getter, Insertable};
 use crate::backend::{Backend, Implementation};
 use std::borrow::Cow;
 use std::marker::PhantomData;
 
 mod parse;
-use crate::schema::Schema;
 
 pub struct Table<B: Backend> {
     pub ident: Ident,

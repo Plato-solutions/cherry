@@ -1,7 +1,7 @@
 //! Common functionality used for all database backends
 
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{quote};
 use syn::{Ident, Type, Visibility};
 
 pub use table::*;

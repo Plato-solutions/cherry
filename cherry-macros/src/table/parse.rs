@@ -3,19 +3,18 @@ use std::convert::TryFrom;
 use proc_macro2::Span;
 use syn::{Data, DeriveInput, Error, Ident, Result};
 
-use crate::attrs::{parse_attrs, Insertable, Queryable, TableAttr, TableFieldAttr};
+use crate::attrs::{parse_attrs, Insertable, TableAttr, TableFieldAttr};
 use crate::utils::{missing_attr, set_once};
 
 use super::{Table, TableField};
 use crate::backend::Backend;
 use std::marker::PhantomData;
-use itertools::Itertools;
 
 macro_rules! none {
     ($($i:ident),*) => { $( let mut $i = None; )* };
 }
 
-use syn::{GenericArgument, PathArguments, Type};
+use syn::{ Type};
 
 impl<B: Backend> TryFrom<&syn::Field> for TableField<B> {
     type Error = Error;
@@ -113,7 +112,7 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Table<B> {
             .collect::<Result<Vec<_>>>()?;
 
         none!(table, id, insertable);
-        let (attrs, other_attrs) = parse_attrs::<TableAttr>(&value.attrs)?;
+        let (attrs, _other_attrs) = parse_attrs::<TableAttr>(&value.attrs)?;
         for attr in attrs {
             match attr {
                 TableAttr::Table(x) => set_once(&mut table, x)?,

@@ -22,7 +22,12 @@ pub async fn setup_pools<T>(config: T) -> Result<()>
 
         POOLS.set(pools).map_err(|_| anyhow!("Failed to set pools."))?;
     } else {
-        anyhow!("Failed to set pools.");
+        if cfg!(any(test, feature = "test")) {
+            return Ok(());
+        } else {
+            println!("cherry feature test not enabled");
+            Err(anyhow!("Failed to set pools."))?;
+        }
     }
 
     Ok(())
@@ -39,7 +44,7 @@ pub fn get(type_id: TypeId) -> Result<&'static Pool> {
 
 /// Because pools is OnceCell, this renders that database nearly useless
 pub async fn close(type_id: TypeId) -> Result<bool> {
-    let mut value = POOLS.get()
+    let value = POOLS.get()
         .ok_or_else(|| anyhow!("Pools is empty."))?
         .get(&type_id)
         .ok_or_else(|| anyhow!("No pool found for key: {:?}", type_id))?;

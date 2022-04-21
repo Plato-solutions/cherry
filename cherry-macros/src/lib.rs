@@ -1,7 +1,5 @@
 #![cfg(any(feature = "mysql", feature = "postgres", feature = "sqlite"))]
 
-use proc_macro2::TokenStream;
-
 mod attrs;
 mod backend;
 mod patch;

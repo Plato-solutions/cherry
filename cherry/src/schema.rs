@@ -1,9 +1,6 @@
 use crate::types::{Arguments, Result, Row};
 
 use std::any::TypeId;
-use crate::{connection};
-use crate::types::{Pool};
-use crate::types::Transaction;
 use async_trait::async_trait;
 use crate::query::select::Select;
 use crate::query::update::Update;

@@ -3,12 +3,11 @@ use std::convert::TryFrom;
 use proc_macro2::Span;
 use syn::{Data, DeriveInput, Error, Ident, Result};
 
-use crate::attrs::{parse_attrs, Insertable, Queryable, TableAttr, TableFieldAttr};
+use crate::attrs::{parse_attrs, Queryable, TableAttr};
 use crate::utils::{missing_attr, set_once};
 use crate::table::TableField;
 use super::{Schema};
 use crate::backend::Backend;
-use std::marker::PhantomData;
 
 macro_rules! none {
     ($($i:ident),*) => { $( let mut $i = None; )* };
@@ -23,7 +22,7 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Schema<B> {
             _ => panic!("not a struct with named fields"),
         };
 
-        let mut fields = data
+        let fields = data
             .fields
             .iter()
             .map(TableField::try_from)
@@ -32,7 +31,7 @@ impl<B: Backend> TryFrom<&syn::DeriveInput> for Schema<B> {
         // fields.retain(|field| !field.unmapped);
 
         none!(table, datasource, queryable);
-        let (attrs, other_attrs) = parse_attrs::<TableAttr>(&value.attrs)?;
+        let (attrs, _other_attrs) = parse_attrs::<TableAttr>(&value.attrs)?;
         for attr in attrs {
             match attr {
                 TableAttr::Table(x) => set_once(&mut table, x)?,

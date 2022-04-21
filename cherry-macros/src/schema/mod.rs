@@ -1,14 +1,11 @@
 use std::convert::TryFrom;
 
-use itertools::Itertools;
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{DeriveInput, Result, Type, Visibility};
+use syn::{DeriveInput, Result, Visibility};
 
-use crate::attrs::{Getter, Insertable, Queryable};
+use crate::attrs::{Queryable};
 use crate::backend::{Backend, Implementation};
-use std::borrow::Cow;
-use std::marker::PhantomData;
 
 use crate::table::TableField;
 mod parse;

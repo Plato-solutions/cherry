@@ -32,15 +32,12 @@
 
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
-use std::any::TypeId;
 
 use sqlx::{Executor, Result};
 
 pub use cherry_macros::*;
 use crate::{connection, Schema};
-use crate::query::select::Select;
 use crate::types::{Pool};
-use crate::types::Transaction;
 use async_trait::async_trait;
 
 
