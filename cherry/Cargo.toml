@@ -64,7 +64,7 @@ serde_derive = { version = "1.0.123", optional = true }
 
 [dependencies.cherry-macros]
 version = "0.8.2"
-path = "../../cherry/cherry-macros"
+path = "../cherry-macros"
 
 [dev-dependencies]
 tokio = { version = "1.1", features = ["full"] }
