@@ -192,7 +192,7 @@ pub(crate) fn impl_patch<B: Backend>(patch: &Patch) -> TokenStream {
                 Box::pin(async move {
                     sqlx::query!(#sql, #( self.#query_args, )* id)
                         .execute(Table::pool()?)
-                        .await?;
+                        .await;
                     Ok(())
                 })
             }
