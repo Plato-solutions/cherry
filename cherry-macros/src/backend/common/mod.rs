@@ -181,7 +181,7 @@ pub(crate) fn impl_patch<B: Backend>(patch: &Patch) -> TokenStream {
                 id: <Self::Table as cherry::Table>::Id,
             ) -> #box_future<'a, sqlx::Result<()>> {
                 let db = Table::pool()?;
-                Ok(self.patch_row_with(db,id)?)
+                Ok(self.patch_row_with(db,id).await?)
             }
 
             fn patch_row_with<'a, 'c: 'a>(
