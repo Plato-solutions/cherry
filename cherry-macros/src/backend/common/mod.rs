@@ -180,8 +180,15 @@ pub(crate) fn impl_patch<B: Backend>(patch: &Patch) -> TokenStream {
                 &'a self,
                 id: <Self::Table as cherry::Table>::Id,
             ) -> #box_future<'a, sqlx::Result<()>> {
-                let db = Table::pool()?;
-                self.patch_row_with(db,id)
+                match <Self::Table as cherry::Table>::pool() {
+                    Ok(db) => self.patch_row_with(db,id),
+                    Err(e) => {
+                        Box::pin(async move {
+                            Err(e)?;
+                            Ok(())
+                        })
+                    }
+                }
             }
 
             fn patch_row_with<'a, 'c: 'a>(
@@ -191,8 +198,8 @@ pub(crate) fn impl_patch<B: Backend>(patch: &Patch) -> TokenStream {
             ) -> #box_future<'a, sqlx::Result<()>> {
                 Box::pin(async move {
                     sqlx::query!(#sql, #( self.#query_args, )* id)
-                        .execute(Table::pool()?)
-                        .await;
+                        .execute(db)
+                        .await?;
                     Ok(())
                 })
             }
