@@ -1,6 +1,6 @@
 [package]
 name = "cherry"
-version = "0.8.2"
+version = "0.8.3"
 authors = ["bugslabx <bugslabx@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -63,7 +63,7 @@ serde = { version = "1.0.123", optional = true }
 serde_derive = { version = "1.0.123", optional = true }
 
 [dependencies.cherry-macros]
-version = "0.8.2"
+version = "0.8.3"
 path = "../cherry-macros"
 
 [dev-dependencies]
