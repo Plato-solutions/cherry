@@ -214,7 +214,7 @@ pub trait Patch
     fn apply_to(self, entity: &mut Self::Table);
 
     /// Applies this patch to a row in the database.
-    fn patch_row<'a, 'c: 'a>(
+    fn patch_row<'a>(
         &'a self,
         id: <Self::Table as Table>::Id,
     ) -> BoxFuture<'a, Result<()>>;
