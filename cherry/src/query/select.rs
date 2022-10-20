@@ -69,8 +69,11 @@ impl<'a, T> Select<'a, T> where T: Schema {
     gen_where!();
 
     pub async fn fetch(self) -> Result<Option<T>> {
+
+        let sql = self.query.sql_builder.sql()?;
+        eprintln!("sql:{}",sql);
         let row = sqlx::query_with(
-            self.query.sql_builder.sql()?.as_str(),
+            sql.as_str(),
             self.query.arguments
         ).fetch_optional(connection::get(self.query.datasource)?).await?;
         match row {
@@ -80,8 +83,10 @@ impl<'a, T> Select<'a, T> where T: Schema {
     }
 
     pub async fn fetch_all(self) -> Result<Vec<T>> {
+        let sql = self.query.sql_builder.sql()?;
+        eprintln!("sql:{}",sql);
         let rows = sqlx::query_with(
-            self.query.sql_builder.sql()?.as_str(),
+            sql.as_str(),
             self.query.arguments
         ).fetch_all(connection::get(self.query.datasource)?).await?;
         let mut vec = Vec::with_capacity(rows.len());

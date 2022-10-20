@@ -33,6 +33,21 @@ macro_rules! gen_where {
             self
         }
 
+        pub fn count_as<S, V>(mut self, f: S, name: V) -> Self
+        where
+            S: ToString,
+            V: ToString,
+        {
+            self.query.count_as(f, name);
+            self
+        }
+
+        pub fn having<S: ToString>(mut self, cond: S) -> Self {
+            self.query.having(cond);
+            self
+        }
+
+
         pub fn and_where_eq<S, V>(mut self, f: S, v: V) -> Self
             where
                 S: ToString,

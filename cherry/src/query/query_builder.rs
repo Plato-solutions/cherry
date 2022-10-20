@@ -36,6 +36,20 @@ impl<'a> QueryBuilder<'a>{
         self
     }
 
+    pub (crate) fn count_as<S, T>(&mut self, f: S, name: T) -> &mut Self
+        where
+            S: ToString,
+            T: ToString,
+    {
+        self.sql_builder.count_as(f, name);
+        self
+    }
+
+    pub (crate) fn having<S: ToString>(&mut self, cond: S) -> &mut Self {
+        self.sql_builder.having(cond);
+        self
+    }
+
     pub(crate) fn and_where_eq<S, V>(&mut self, f: S, v: V) -> &mut Self
         where
             S: ToString,
