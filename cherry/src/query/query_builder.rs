@@ -168,7 +168,7 @@ impl<'a> QueryBuilder<'a>{
     {
         match (min, max) {
             (Some(a), Some(b)) => self.and_where_between(f, a, b),
-            (Some(a), None) => self.and_where_gt(f, a),
+            (Some(a), None) => self.and_where_gte(f, a),
             (None, Some(b)) => self.and_where_lt(f, b),
             _ => self,
         }
