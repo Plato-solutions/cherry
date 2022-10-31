@@ -63,7 +63,7 @@ serde = { version = "1.0.123", optional = true }
 serde_derive = { version = "1.0.123", optional = true }
 
 [dependencies.cherry-macros]
-version = "0.8.4"
+version = "0.8.5"
 path = "../cherry-macros"
 
 [dev-dependencies]
