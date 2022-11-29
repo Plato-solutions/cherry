@@ -11,7 +11,7 @@ pub use cherry_macros::*;
 pub use {
     schema::Schema,
     datasource::DataSource,
-    table::{Table,Insert,Patch,Db},
+    table::{Table,Insert,Patch,Db,ConnectOptions},
     query::select::Select,
 };
 

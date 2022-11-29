@@ -58,6 +58,14 @@ pub type Db = sqlx::Postgres;
 #[cfg(feature = "sqlite")]
 pub type Db = sqlx::Sqlite;
 
+
+#[cfg(feature = "mysql")]
+pub type ConnectOptions = sqlx::mysql::MySqlConnectOptions;
+#[cfg(feature = "postgres")]
+pub type ConnectOptions = sqlx::postgres::PgConnectOptions;
+#[cfg(feature = "sqlite")]
+pub type ConnectOptions = sqlx::sqlite::SqliteConnectOptions;
+
 /// A database table in which each row is identified by a unique ID.
 #[async_trait]
 pub trait Table : Schema
