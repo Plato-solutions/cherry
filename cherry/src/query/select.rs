@@ -71,7 +71,7 @@ impl<'a, T> Select<'a, T> where T: Schema {
     pub async fn fetch(self) -> Result<Option<T>> {
 
         let sql = self.query.sql_builder.sql()?;
-        eprintln!("sql:{}",sql);
+//         eprintln!("sql:{}",sql);
         let row = sqlx::query_with(
             sql.as_str(),
             self.query.arguments
